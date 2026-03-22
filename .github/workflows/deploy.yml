@@ -1,11 +1,25 @@
-name: Deploy to Cloudflare Pages
+name: Deploy BOSS HQ
 
 on:
   push:
     branches: [main]
 
 jobs:
-  deploy:
+  deploy-worker:
+    name: Deploy API Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy worker to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fe2ae67928de1f5b18f1a7d1edf65005
+          command: deploy
+
+  deploy-frontend:
+    name: Deploy Frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
