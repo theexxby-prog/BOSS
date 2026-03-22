@@ -1,0 +1,20 @@
+{
+  "name": "boss-hq",
+  "version": "0.1.0",
+  "description": "BOSS — Business Operating System",
+  "private": true,
+  "scripts": {
+    "dev:worker": "cd worker && npx wrangler dev --local",
+    "dev:frontend": "npx serve frontend -p 3000 --cors",
+    "deploy:worker": "cd worker && npx wrangler deploy",
+    "deploy:frontend": "npx wrangler pages deploy frontend --project-name boss-hq",
+    "db:init": "npx wrangler d1 execute boss-db --local --file=worker/schema.sql",
+    "db:init:remote": "npx wrangler d1 execute boss-db --file=worker/schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "typescript": "^5.4.5",
+    "wrangler": "^3.57.0",
+    "serve": "^14.2.3"
+  }
+}

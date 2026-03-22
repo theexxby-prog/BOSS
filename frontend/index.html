@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BOSS HQ — Business Operating System</title>
+
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/layout.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <link rel="stylesheet" href="css/modules/hq.css"/>
+  <link rel="stylesheet" href="css/modules/leads.css"/>
+  <link rel="stylesheet" href="css/modules/clients.css"/>
+  <link rel="stylesheet" href="css/modules/finance.css"/>
+  <link rel="stylesheet" href="css/modules/social.css"/>
+  <link rel="stylesheet" href="css/modules/bd.css"/>
+  <link rel="stylesheet" href="css/modules/ops.css"/>
+  <link rel="stylesheet" href="css/modules/campaigns.css"/>
+  <link rel="stylesheet" href="css/modules/assets.css"/>
+  <link rel="stylesheet" href="css/modules/documents.css"/>
+  <link rel="stylesheet" href="css/modules/settings.css"/>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ────────────────────────────────────────────────────────── -->
+  <div class="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-icon">B</div>
+      <div>
+        <div class="logo-name">BOSS</div>
+        <div class="logo-sub">Business OS</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Command</div>
+      <div class="nav-item active" data-module="overview" onclick="navigate('overview')">
+        <span class="nav-icon">🏠</span> HQ Overview
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Pipeline</div>
+      <div class="nav-item" data-module="campaigns" onclick="navigate('campaigns')">
+        <span class="nav-icon">📋</span> Campaigns
+      </div>
+      <div class="nav-item" data-module="leads" onclick="navigate('leads')">
+        <span class="nav-icon">🎯</span> Lead Operations
+        <span class="nav-badge" id="qa-badge"></span>
+      </div>
+      <div class="nav-item" data-module="clients" onclick="navigate('clients')">
+        <span class="nav-icon">🤝</span> Client Management
+      </div>
+      <div class="nav-item" data-module="assets" onclick="navigate('assets')">
+        <span class="nav-icon">🗂️</span> Assets &amp; Pages
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Business</div>
+      <div class="nav-item" data-module="finance" onclick="navigate('finance')">
+        <span class="nav-icon">💰</span> Finance &amp; P&amp;L
+      </div>
+      <div class="nav-item" data-module="documents" onclick="navigate('documents')">
+        <span class="nav-icon">📄</span> Documents
+      </div>
+      <div class="nav-item" data-module="bd" onclick="navigate('bd')">
+        <span class="nav-icon">📈</span> BD Pipeline
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Growth</div>
+      <div class="nav-item" data-module="social" onclick="navigate('social')">
+        <span class="nav-icon">📢</span> Social Command
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">System</div>
+      <div class="nav-item" data-module="ops" onclick="navigate('ops')">
+        <span class="nav-icon">⚙️</span> Operations Centre
+      </div>
+      <div class="nav-item" data-module="settings" onclick="navigate('settings')">
+        <span class="nav-icon">🔧</span> Settings
+      </div>
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="user-row">
+        <div class="avatar">VM</div>
+        <div>
+          <div class="uname">Vishal Mehta</div>
+          <div class="urole">Director, BD</div>
+        </div>
+        <div class="online-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAIN ───────────────────────────────────────────────────────────── -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <span class="topbar-title" id="topbar-title">HQ Overview</span>
+        <span class="topbar-sub"   id="topbar-sub">Your complete business at a glance</span>
+      </div>
+      <div class="topbar-right">
+        <div class="date-chip" id="date-chip">📅 Loading...</div>
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+        <div class="notif-btn">🔔<div class="notif-pip"></div></div>
+        <button class="btn btn-pri btn-sm">🤖 Ask Claude</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+
+</div>
+
+<!-- ── JAVASCRIPT ─────────────────────────────────────────────────────────── -->
+<script src="js/api.js"></script>
+<script src="js/state.js"></script>
+<script src="js/components/kpi.js"></script>
+<script src="js/components/chart.js"></script>
+<script src="js/components/table.js"></script>
+<script src="js/modules/hq.js"></script>
+<script src="js/modules/campaigns.js"></script>
+<script src="js/modules/leads.js"></script>
+<script src="js/modules/clients.js"></script>
+<script src="js/modules/assets.js"></script>
+<script src="js/modules/finance.js"></script>
+<script src="js/modules/documents.js"></script>
+<script src="js/modules/social.js"></script>
+<script src="js/modules/bd.js"></script>
+<script src="js/modules/ops.js"></script>
+<script src="js/modules/settings.js"></script>
+<script src="js/router.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

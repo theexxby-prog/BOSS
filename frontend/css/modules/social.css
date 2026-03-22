@@ -1,0 +1,13 @@
+/* Social Command */
+.soc-post      { background: var(--card); border: 1px solid var(--brd); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.soc-hdr       { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.soc-body      { font-size: 13px; line-height: 1.6; color: var(--t2); margin-bottom: 12px; }
+.soc-foot      { display: flex; gap: 7px; }
+
+/* Content calendar slots */
+.cal-slot       { display: flex; align-items: center; gap: 11px; padding: 10px 12px; background: var(--card); border: 1px solid var(--brd); border-radius: 8px; margin-bottom: 7px; cursor: pointer; }
+.cal-slot:hover { border-color: var(--brd2); }
+.cal-time       { font-size: 12px; font-weight: 700; color: var(--t3); min-width: 48px; }
+.cal-dot        { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cal-title      { font-size: 13px; font-weight: 600; }
+.cal-sub        { font-size: 11px; color: var(--t3); }

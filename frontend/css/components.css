@@ -1,0 +1,125 @@
+/* BOSS HQ — Reusable UI Components */
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: none; font-family: inherit; transition: .15s;
+}
+.btn-pri              { background: var(--acc); color: #fff; }
+.btn-pri:hover        { background: #7c73ff; box-shadow: 0 0 16px var(--acc3); }
+.btn-ghost            { background: transparent; color: var(--t2); border: 1px solid var(--brd); }
+.btn-ghost:hover      { background: var(--card); color: var(--t1); }
+.btn-grn              { background: var(--grn); color: #000; }
+.btn-red              { background: transparent; color: var(--red); border: 1px solid rgba(239, 68, 68, .3); }
+.btn-sm               { padding: 5px 10px; font-size: 12px; }
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.card         { background: var(--card); border: 1px solid var(--brd); border-radius: 12px; padding: 18px; transition: border-color .15s; }
+.card:hover   { border-color: var(--brd2); }
+.card-sm      { padding: 14px; }
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+.badge  { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.b-grn  { background: var(--grn2); color: var(--grn); }
+.b-red  { background: var(--red2); color: var(--red); }
+.b-yel  { background: var(--yel2); color: var(--yel); }
+.b-blu  { background: var(--blu2); color: var(--blu); }
+.b-acc  { background: var(--acc2); color: var(--acc); }
+.b-cyn  { background: var(--cyn2); color: var(--cyn); }
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+.tbl-wrap           { overflow-x: auto; }
+table               { width: 100%; border-collapse: collapse; font-size: 14px; }
+thead th            { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: .7px; border-bottom: 1px solid var(--brd); white-space: nowrap; }
+tbody td            { padding: 12px 14px; border-bottom: 1px solid var(--brd); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td   { background: var(--card2); }
+
+/* ── Progress bar ───────────────────────────────────────────────────────── */
+.prog      { height: 6px; background: var(--brd); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; }
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 3px; background: var(--bg2); padding: 4px; border-radius: 10px; border: 1px solid var(--brd); margin-bottom: 20px; }
+.tab  { padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--t2); transition: .15s; user-select: none; }
+.tab:hover:not(.active) { color: var(--t1); }
+.tab.active { background: var(--card); color: var(--t1); box-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+
+/* ── Alerts ─────────────────────────────────────────────────────────────── */
+.alert { display: flex; gap: 10px; padding: 13px 16px; border-radius: 8px; font-size: 14px; line-height: 1.55; margin-bottom: 10px; }
+.a-yel { background: var(--yel2); border: 1px solid rgba(245, 158, 11, .2); color: var(--yel); }
+.a-grn { background: var(--grn2); border: 1px solid rgba(34,  197, 94, .2); color: var(--grn); }
+.a-blu { background: var(--blu2); border: 1px solid rgba(59,  130, 246, .2); color: var(--blu); }
+.a-red { background: var(--red2); border: 1px solid rgba(239, 68,  68, .2); color: var(--red); }
+
+/* ── KPI Cards ──────────────────────────────────────────────────────────── */
+.kpi-label  { font-size: 11px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+.kpi-val    { font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.kpi-chg    { font-size: 13px; font-weight: 600; margin-top: 6px; }
+.kpi-chg.up { color: var(--grn); }
+.kpi-chg.dn { color: var(--red); }
+.sparkline  { display: flex; align-items: flex-end; gap: 2px; height: 32px; margin-top: 12px; }
+.spark-b    { flex: 1; background: rgba(108, 99, 255, .2); border-radius: 2px; min-height: 3px; }
+.spark-b.hi { background: var(--acc); }
+.spark-b:hover { background: var(--acc); }
+
+/* ── Metric rows ────────────────────────────────────────────────────────── */
+.mrow           { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--brd); font-size: 14px; }
+.mrow:last-child { border-bottom: none; }
+.mlabel         { color: var(--t2); }
+.mval           { font-weight: 700; }
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+.input              { background: rgba(255, 255, 255, .05); border: 1px solid var(--brd); color: var(--t1); padding: 9px 12px; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s; width: 100%; }
+.input:focus        { border-color: var(--acc); }
+.input::placeholder { color: var(--t3); }
+select.input        { cursor: pointer; }
+textarea.input      { resize: vertical; }
+
+/* ── Theme toggle ───────────────────────────────────────────────────────── */
+.theme-toggle {
+  width: 34px; height: 34px;
+  background: var(--card); border: 1px solid var(--brd);
+  border-radius: 8px; cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, background .15s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--acc); background: var(--card2); }
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--brd); margin: 14px 0; }
+
+/* ── Animations ─────────────────────────────────────────────────────────── */
+.hidden { display: none; }
+.pulse  { animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+.fade   { animation: fadeIn .25s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Utility helpers ────────────────────────────────────────────────────── */
+.clr-grn { color: var(--grn); }
+.clr-red { color: var(--red); }
+.clr-yel { color: var(--yel); }
+.clr-acc { color: var(--acc); }
+.clr-cyn { color: var(--cyn); }
+.fw7     { font-weight: 700; }
+.fw8     { font-weight: 800; }
+.fs11    { font-size: 11px; }
+.fs12    { font-size: 12px; }
+.fs13    { font-size: 13px; }
+.fs14    { font-size: 14px; }
+.mt8     { margin-top: 8px; }
+.mt12    { margin-top: 12px; }
+.mt16    { margin-top: 16px; }
+.mb8     { margin-bottom: 8px; }
+.mb12    { margin-bottom: 12px; }
+.mb16    { margin-bottom: 16px; }
+.mb20    { margin-bottom: 20px; }
+.flex    { display: flex; }
+.fxc     { align-items: center; }
+.fxb     { justify-content: space-between; }
+.gap8    { gap: 8px; }
+.gap12   { gap: 12px; }

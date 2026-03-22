@@ -1,0 +1,21 @@
+name = "boss-worker"
+main = "worker/src/index.ts"
+compatibility_date = "2024-05-29"
+compatibility_flags = ["nodejs_compat"]
+
+[[routes]]
+pattern = "boss-api.mehtahouse.cc/*"
+zone_name = "mehtahouse.cc"
+
+[[routes]]
+pattern = "boss-api.mehtahouse.cc"
+custom_domain = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "boss-db"
+database_id = "fff1beb1-9938-4297-af66-797e4126dd5a"
+
+[dev]
+port = 8787
+local_protocol = "http"

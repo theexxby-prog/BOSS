@@ -1,0 +1,10 @@
+/* Lead Operations — QA queue cards */
+.qa-card         { background: var(--card); border: 1px solid var(--brd); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+.qa-card:hover   { border-color: var(--brd2); }
+.qa-hdr          { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.qa-name         { font-size: 14px; font-weight: 700; }
+.qa-sub          { font-size: 12px; color: var(--t3); margin-top: 1px; }
+.qa-fields       { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.qf-label        { font-size: 10px; color: var(--t3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 1px; }
+.qf-val          { font-size: 12px; font-weight: 600; }
+.qa-actions      { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
