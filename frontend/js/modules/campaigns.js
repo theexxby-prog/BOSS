@@ -1,4 +1,4 @@
-// Campaigns module
+// Campaigns module — v2
 
 function setCampaignsTab(t) { State.campaignsTab = t; renderModule('campaigns'); }
 
