@@ -2,7 +2,7 @@ name: Deploy BOSS HQ
 
 on:
   push:
-    branches: [main, claude/work-on-boss-BrJkv]
+    branches: [main, 'claude/**']
 
 jobs:
   deploy-worker:
