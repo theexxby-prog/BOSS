@@ -8,6 +8,7 @@ const State = {
   socTab:        'calendar',
   clientDetail:  null,
   campaignsTab:  'active',
+  viewingCampaign: null,
   assetsTab:     'assets',
   docsTab:       'all',
 };
