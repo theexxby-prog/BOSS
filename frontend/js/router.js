@@ -64,5 +64,23 @@ async function renderModule(id) {
   }
 }
 
+async function refreshBadges() {
+  try {
+    const cRes = await API.getCampaigns();
+    const drafts = cRes.success ? cRes.data.filter(c => c.status === 'draft').length : 0;
+    const badge = document.getElementById('campaign-badge');
+    if (badge) {
+      badge.textContent = drafts || '';
+      badge.className = 'nav-badge' + (drafts ? ' red' : '');
+      badge.style.display = drafts ? '' : 'none';
+    }
+  } catch {}
+}
+
+// Refresh badges on load and periodically
+setTimeout(refreshBadges, 500);
+setInterval(refreshBadges, 60000);
+
 window.navigate     = navigate;
 window.renderModule = renderModule;
+window.refreshBadges = refreshBadges;
