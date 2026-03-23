@@ -15,8 +15,8 @@ function toggleTheme() {
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
 
-// Load saved preference (default: dark)
-applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+// Load saved preference (default: light)
+applyTheme(localStorage.getItem(THEME_KEY) || 'light');
 
 window.toggleTheme = toggleTheme;
 
