@@ -38,31 +38,17 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   let customQuestions: { question: string; type: string; options?: string[] }[] = [];
   try { customQuestions = JSON.parse(page.custom_questions || '[]'); } catch {}
 
+  // All custom questions render as dropdowns with pre-populated options
   const customFieldsHtml = customQuestions.map((q, i) => {
-    if (q.type === 'select' && q.options && q.options.length > 0) {
-      const opts = q.options.map((o: string) => `<option value="${o}">${o}</option>`).join('');
-      return `<div class="form-group">
-        <label>${q.question}</label>
-        <select name="custom_q${i+1}" required>
-          <option value="">Select an option...</option>
-          ${opts}
-        </select>
-      </div>`;
-    }
-    if (q.type === 'select') {
-      return `<div class="form-group">
-        <label>${q.question}</label>
-        <select name="custom_q${i+1}" required>
-          <option value="">Select...</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-          <option value="Considering">Considering</option>
-        </select>
-      </div>`;
-    }
+    const opts = (q.options && q.options.length > 0)
+      ? q.options.map((o: string) => `<option value="${o}">${o}</option>`).join('')
+      : `<option value="Yes">Yes</option><option value="No">No</option><option value="Evaluating">Evaluating</option><option value="Not sure">Not sure</option>`;
     return `<div class="form-group">
       <label>${q.question}</label>
-      <input type="text" name="custom_q${i+1}" required placeholder="Your answer" />
+      <select name="custom_q${i+1}" required>
+        <option value="">Select an option...</option>
+        ${opts}
+      </select>
     </div>`;
   }).join('');
 
@@ -233,16 +219,33 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     }
     .trust-item svg { width: 14px; height: 14px; fill: #10b981; }
 
-    .testimonial {
-      margin-top: 32px;
-      padding: 20px;
-      border-radius: 12px;
+    .testimonial-strip {
+      max-width: 1000px;
+      margin: 48px auto 0;
+      padding: 0 20px;
+    }
+    .testimonial-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 28px 32px;
+      border-radius: 16px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.06);
     }
-    .testimonial .quote { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; font-style: italic; margin-bottom: 12px; }
-    .testimonial .author { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); }
-    .testimonial .role { font-size: 12px; color: rgba(255,255,255,0.4); }
+    .testimonial-avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, ${brandColor}, ${brandAccent});
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 16px;
+      flex-shrink: 0;
+    }
+    .testimonial-content { flex: 1; }
+    .testimonial-content .quote { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.7; font-style: italic; margin-bottom: 12px; }
+    .testimonial-content .author { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); }
+    .testimonial-content .role { font-size: 12px; color: rgba(255,255,255,0.4); }
+    .testimonial-stars { color: #f59e0b; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
 
     /* ── Form card ─────────────────────── */
     .form-card {
@@ -422,7 +425,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       .sticky-cta { display: block; }
       .main { padding-bottom: 100px; }
       .topbar { padding: 12px 20px; }
-      .testimonial { display: none; }
+      .testimonial-inner { flex-direction: column; align-items: center; text-align: center; }
     }
   </style>
 </head>
@@ -505,11 +508,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
           </div>
         </div>
 
-        <div class="testimonial">
-          <div class="quote">"This resource completely changed how we approach our strategy. The frameworks are immediately actionable and the data is incredibly thorough."</div>
-          <div class="author">Sarah M.</div>
-          <div class="role">VP of Operations · Fortune 500 Company</div>
-        </div>
       </div>
 
       <!-- Right: Form -->
@@ -586,6 +584,19 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
           <p>Your copy of "${assetName}" is ready. Click below to download it now.</p>
           ${assetUrl ? `<a href="${assetUrl}" target="_blank" class="dl-btn">⬇ Download Now</a>` : '<p style="color:#10b981;font-weight:600">Your resource will be sent to your email shortly.</p>'}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Testimonial strip — full width below grid -->
+  <div class="testimonial-strip fade-up fade-up-d3">
+    <div class="testimonial-inner">
+      <div class="testimonial-avatar">SM</div>
+      <div class="testimonial-content">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="quote">"This resource completely changed how we approach our strategy. The frameworks are immediately actionable and the data is incredibly thorough. Highly recommend for any senior leader."</div>
+        <div class="author">Sarah M.</div>
+        <div class="role">VP of Operations · Fortune 500 Company</div>
       </div>
     </div>
   </div>
