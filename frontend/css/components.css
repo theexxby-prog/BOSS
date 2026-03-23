@@ -46,6 +46,8 @@ tbody tr:hover td   { background: var(--card2); }
 .tab  { padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--t2); transition: .15s; user-select: none; }
 .tab:hover:not(.active) { color: var(--t1); }
 .tab.active { background: var(--card); color: var(--t1); box-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+.notif-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; line-height: 1; margin-left: 4px; animation: badge-pulse 2s ease-in-out infinite; }
+@keyframes badge-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
 /* ── Alerts ─────────────────────────────────────────────────────────────── */
 .alert { display: flex; gap: 10px; padding: 13px 16px; border-radius: 8px; font-size: 14px; line-height: 1.55; margin-bottom: 10px; }

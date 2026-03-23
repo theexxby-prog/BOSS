@@ -9,8 +9,19 @@ const revenueData = [
   { month: 'Mar', revenue: 14800, leads: 2680 },
 ];
 
-function renderOverview() {
+async function renderOverview() {
+  const cRes = await API.getCampaigns();
+  const campaigns = cRes.success ? cRes.data : [];
+  const pendingRequests = campaigns.filter(c => c.status === 'draft').length;
+
   return `<div class="fade">
+    ${pendingRequests ? `<div class="alert a-yel mb16" style="cursor:pointer" onclick="navigate('campaigns');setTimeout(()=>setCampaignsTab('draft'),100)">
+      <div style="display:flex;align-items:center;gap:12px;width:100%">
+        <span style="font-size:24px">📨</span>
+        <div style="flex:1"><strong>${pendingRequests} campaign request${pendingRequests>1?'s':''} pending review</strong><div class="fs12" style="margin-top:2px">Click to review and deploy landing pages</div></div>
+        <span class="notif-badge">${pendingRequests}</span>
+      </div>
+    </div>` : ''}
     <div class="brief-card">
       <div class="brief-hdr">
         <span style="font-size:24px">☀️</span>

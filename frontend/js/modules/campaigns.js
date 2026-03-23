@@ -8,8 +8,9 @@ async function renderCampaigns() {
   const clients   = clRes.success ? clRes.data : [];
   const clientMap = Object.fromEntries(clients.map(c => [c.id, c.name]));
 
+  const draftCount = campaigns.filter(c => c.status === 'draft').length;
   const tabs     = ['active','draft','paused','completed','all'];
-  const tabLabel = ['▶ Active','📋 Requests','⏸ Paused','✓ Completed','All'];
+  const tabLabel = ['▶ Active',`📋 Requests${draftCount ? ` <span class="notif-badge">${draftCount}</span>` : ''}`,'⏸ Paused','✓ Completed','All'];
   const tabHtml  = tabs.map((t,i) => `<div class="tab${t===State.campaignsTab?' active':''}" onclick="setCampaignsTab('${t}')">${tabLabel[i]}</div>`).join('');
 
   const filtered = State.campaignsTab === 'all' ? campaigns : campaigns.filter(c => c.status === State.campaignsTab);
