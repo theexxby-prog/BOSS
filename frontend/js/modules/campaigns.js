@@ -166,7 +166,7 @@ function renderRequestCard(c, clientMap) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Campaign Detail View — compact, no dead space
+// Campaign Detail View — compact with metrics box
 // ═══════════════════════════════════════════════════════════
 async function renderCampaignDetail(campaignId) {
   const [cRes, clRes, pRes] = await Promise.all([API.getCampaign(campaignId), API.getClients(), API.getPages()]);
@@ -177,7 +177,7 @@ async function renderCampaignDetail(campaignId) {
   const clientMap = Object.fromEntries(clients.map(cl => [cl.id, cl.name]));
   const pages = (pRes.success ? pRes.data : []).filter(p => p.campaign_id === c.id);
 
-  let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[];
+  let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[], coRevenue=[];
   try { tal=JSON.parse(c.tal||'[]'); } catch {}
   try { suppression=JSON.parse(c.suppression_list||'[]'); } catch {}
   try { customQ=JSON.parse(c.custom_questions||'[]'); } catch {}
@@ -185,73 +185,122 @@ async function renderCampaignDetail(campaignId) {
   try { industries=JSON.parse(c.industries||'[]'); } catch {}
   try { titles=JSON.parse(c.titles||'[]'); } catch {}
   try { sizes=JSON.parse(c.company_sizes||'[]'); } catch {}
+  try { coRevenue=JSON.parse(c.company_revenue||'[]'); } catch {}
+
+  // Store TAL for modal access
+  window._talCache = window._talCache || {};
+  window._talCache[c.id] = tal;
 
   const bc = c.brand_color||'#2563eb', bs = c.brand_color_secondary||'#1e40af', ba = c.brand_accent||'#3b82f6';
   const pct = Math.min(100, Math.round(((c.delivered||0) / Math.max(c.target, 1)) * 100));
   const budget = (c.target||0)*(c.cpl||0);
-  const revenue = (c.delivered||0)*(c.cpl||0);
+
+  const tagHtml = (arr) => arr.length ? arr.map(t=>`<span class="tag">${t}</span>`).join('') : '<span class="fs12" style="color:var(--t3)">—</span>';
 
   const pagesHtml = pages.length ? pages.map(p => {
     const conv = p.submissions && p.views ? Math.round(p.submissions/p.views*100) : 0;
     const url = `https://boss-api.mehtahouse.cc/lp/${p.slug}`;
-    return `<div class="cd-lp"><div style="flex:1"><div class="fw7 fs13">${p.name}</div><div class="fs11" style="color:var(--t3)">/${p.slug}</div></div>
-      <span class="fs12 fw7">${p.views||0} views</span><span class="fs12 fw7 clr-grn">${p.submissions||0} subs</span><span class="fs12 fw7 clr-acc">${conv}%</span>
-      <a href="${url}" target="_blank" class="btn btn-pri btn-sm">View Page ↗</a></div>`;
-  }).join('') : `<div style="padding:16px;text-align:center;color:var(--t3)" class="fs12">No landing pages yet.${c.status==='draft'?` <button class="btn btn-pri btn-sm" style="margin-top:8px" onclick="deployLandingPage(${c.id})">🚀 Deploy</button>`:''}</div>`;
-
-  // Build tag HTML helper
-  const tagHtml = (arr) => arr.length ? arr.map(t=>`<span class="tag">${t}</span>`).join('') : '<span class="fs12" style="color:var(--t3)">—</span>';
+    return `<div class="cd-lp">
+      <div style="flex:1"><div class="fw7 fs13">${p.name}</div><div class="fs11" style="color:var(--t3)">/${p.slug}</div></div>
+      <span class="fs12 fw7">${p.views||0} views</span>
+      <span class="fs12 fw7 clr-grn">${p.submissions||0} subs</span>
+      <span class="fs12 fw7 clr-acc">${conv}%</span>
+      <a href="${url}" target="_blank" class="btn btn-pri btn-sm">View ↗</a>
+    </div>`;
+  }).join('')
+  : `<div style="padding:10px 0;color:var(--t3)" class="fs12 ta-c">No landing pages yet.${c.status==='draft'?` <button class="btn btn-pri btn-sm" style="margin-left:8px" onclick="deployLandingPage(${c.id})">🚀 Deploy</button>`:''}</div>`;
 
   return `<div class="fade">
-    <button class="btn btn-ghost btn-sm mb16" onclick="State.viewingCampaign=null;renderModule('campaigns')">← Back</button>
+    <button class="btn btn-ghost btn-sm mb12" onclick="State.viewingCampaign=null;renderModule('campaigns')">← Campaigns</button>
 
     <!-- Header -->
     <div class="cd-hdr" style="background:linear-gradient(135deg,${bc},${bs})">
-      <div style="display:flex;align-items:center;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
         ${c.logo_url ? `<img src="${c.logo_url}" class="cd-logo"/>` : ''}
         <div><div class="cd-title">${c.name}</div><div class="cd-sub">${clientMap[c.client_id]||'—'}</div></div>
       </div>
       ${statusBadge(c.status)}
     </div>
 
-    <!-- Stats strip -->
-    <div class="cd-stats">
-      <div class="cd-stat"><div class="cd-stat-v">${(c.target||0).toLocaleString()}</div><div class="cd-stat-l">Target</div></div>
-      <div class="cd-stat"><div class="cd-stat-v clr-grn">${(c.delivered||0).toLocaleString()}</div><div class="cd-stat-l">Delivered</div></div>
-      <div class="cd-stat"><div class="cd-stat-v">${pct}%</div><div class="cd-stat-l">Complete</div></div>
-      <div class="cd-stat"><div class="cd-stat-v clr-grn">$${c.cpl}</div><div class="cd-stat-l">CPL</div></div>
-      <div class="cd-stat"><div class="cd-stat-v">$${budget.toLocaleString()}</div><div class="cd-stat-l">Budget</div></div>
-      <div class="cd-stat"><div class="cd-stat-v clr-grn">$${revenue.toLocaleString()}</div><div class="cd-stat-l">Revenue</div></div>
-      <div class="cd-stat"><div class="cd-stat-v ${c.acceptance_rate>=90?'clr-grn':c.acceptance_rate>=75?'clr-yel':'clr-red'}">${c.acceptance_rate||0}%</div><div class="cd-stat-l">Acceptance</div></div>
+    <!-- Key metrics box -->
+    <div class="cd-metrics-box">
+      <div class="cd-metric">
+        <div class="cd-metric-v">${(c.target||0).toLocaleString()}</div>
+        <div class="cd-metric-l">Target Leads</div>
+      </div>
+      <div class="cd-metric">
+        <div class="cd-metric-v" style="color:var(--cyn)">$${c.cpl}</div>
+        <div class="cd-metric-l">Cost per Lead</div>
+      </div>
+      <div class="cd-metric">
+        <div class="cd-metric-v">$${budget.toLocaleString()}</div>
+        <div class="cd-metric-l">Total Budget</div>
+      </div>
+      <div class="cd-metric" style="border-right:none">
+        <div class="cd-metric-v" style="font-size:15px">${fmtDate(c.start_date)}</div>
+        <div class="cd-metric-l">Start → ${fmtDate(c.end_date)}</div>
+      </div>
     </div>
 
-    <!-- Progress -->
-    <div style="height:6px;background:var(--bg3);border-radius:3px;margin-bottom:20px"><div style="height:100%;width:${pct}%;background:${ba};border-radius:3px;transition:width 0.3s"></div></div>
+    ${c.status==='active'?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${ba};border-radius:3px;transition:width 0.3s"></div>
+      </div>
+      <span class="fs11 fw7" style="color:var(--t3);width:32px;text-align:right">${pct}%</span>
+    </div>`:''}
 
-    <div class="cd-grid">
-      <!-- Scope -->
-      <div class="card">
-        <div class="sec-title mb12">Campaign Scope</div>
-        <div class="cd-scope">
-          <div class="cd-row"><span class="cd-label">Asset</span><span class="fw6">${c.asset_name||'—'} ${c.asset_url?`<a href="${c.asset_url}" target="_blank" class="fs12" style="color:${ba}">↗</a>`:''}</span></div>
-          <div class="cd-row"><span class="cd-label">Period</span><span>${fmtDate(c.start_date)} → ${fmtDate(c.end_date)}</span></div>
+    <!-- All details in one card -->
+    <div class="card cd-detail-card">
+
+      <!-- Two-column scope grid -->
+      <div class="cd-scope-grid">
+        <div>
+          <div class="cd-row"><span class="cd-label">Asset</span><span class="fw6 fs13">${c.asset_name||'—'}${c.asset_url?` <a href="${c.asset_url}" target="_blank" style="color:${ba}" class="fs12">↗</a>`:''}</span></div>
           <div class="cd-row"><span class="cd-label">Titles</span><div class="tag-list">${tagHtml(titles)}</div></div>
           <div class="cd-row"><span class="cd-label">Industries</span><div class="tag-list">${tagHtml(industries)}</div></div>
-          <div class="cd-row"><span class="cd-label">Company Size</span><div class="tag-list">${tagHtml(sizes)}</div></div>
+          <div class="cd-row"><span class="cd-label">Coy Size</span><div class="tag-list">${tagHtml(sizes)}</div></div>
+          ${coRevenue.length?`<div class="cd-row"><span class="cd-label">Revenue</span><div class="tag-list">${tagHtml(coRevenue)}</div></div>`:''}
+        </div>
+        <div>
           <div class="cd-row"><span class="cd-label">Geo</span><div class="tag-list">${tagHtml(geo)}</div></div>
-          <div class="cd-row"><span class="cd-label">TAL (${tal.length})</span><span class="fs12" style="color:var(--t3)">${tal.length?tal.slice(0,10).join(', ')+(tal.length>10?` +${tal.length-10} more`:''):'—'}</span></div>
+          <div class="cd-row"><span class="cd-label">TAL</span>
+            ${tal.length
+              ? `<button class="btn btn-ghost btn-sm fs12" onclick="showTALModal(${c.id})" style="padding:3px 10px">View TAL — ${tal.length} companies →</button>`
+              : '<span class="fs12" style="color:var(--t3)">—</span>'}
+          </div>
           <div class="cd-row"><span class="cd-label">Suppression</span><span class="fs12" style="color:var(--t3)">${suppression.length?suppression.join(', '):'None'}</span></div>
-          ${customQ.length?`<div class="cd-row"><span class="cd-label">Questions</span><div>${customQ.map((q,i)=>`<div class="fs13">${i+1}. ${q.question}</div>`).join('')}</div></div>`:''}
-          ${c.notes?`<div class="cd-row"><span class="cd-label">Notes</span><span class="fs13" style="color:var(--t3)">${c.notes}</span></div>`:''}
+          <div class="cd-row" style="border:none"><span class="cd-label">Branding</span>
+            <div style="display:flex;gap:5px;align-items:center">
+              <div class="rq-color-swatch" style="background:${bc}"></div>
+              <div class="rq-color-swatch" style="background:${bs}"></div>
+              <div class="rq-color-swatch" style="background:${ba}"></div>
+              ${c.logo_url?`<span class="fs11" style="color:var(--t3);margin-left:4px">+ Logo</span>`:''}
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Landing Pages -->
-      <div class="card">
-        <div class="sec-title mb12">Landing Pages</div>
+      ${customQ.length?`<div class="cd-subsection">
+        <div class="cd-sub-label">Custom Qualifying Questions</div>
+        ${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:${ba}22;color:${ba}">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}
+      </div>`:''}
+
+      ${c.notes?`<div class="cd-subsection" style="border-bottom:none">
+        <div class="cd-sub-label">Client Notes</div>
+        <div class="fs13" style="color:var(--t3);line-height:1.5;margin-top:4px">${c.notes}</div>
+      </div>`:''}
+
+      <div class="cd-subsection" style="${!customQ.length&&!c.notes?'border-top:none':''}">
+        <div class="cd-sub-label">Landing Pages</div>
         ${pagesHtml}
       </div>
+
     </div>
+
+    ${c.status==='draft'?`<div class="rq-actions" style="margin-top:12px">
+      <button class="btn btn-pri btn-sm" onclick="deployLandingPage(${c.id})" style="flex:1">🚀 Deploy Landing Page</button>
+      <button class="btn btn-ghost btn-sm" onclick="editCampaignRequest(${c.id})">Edit</button>
+    </div>`:''}
   </div>`;
 }
 
@@ -319,6 +368,33 @@ function viewCampaign(id) { State.viewingCampaign = id; renderModule('campaigns'
 function editCampaignRequest(id) { alert('Campaign edit form — coming soon'); }
 function showNewCampaignForm() { alert('New campaign form — coming soon'); }
 
+// ═══════════════════════════════════════════════════════════
+// TAL Modal — full target account list
+// ═══════════════════════════════════════════════════════════
+function showTALModal(campaignId) {
+  const tal = (window._talCache || {})[campaignId] || [];
+  const existing = document.getElementById('tal-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'tal-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `<div class="modal-box tal-modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="fw7 fs16">Target Account List</div>
+      <span class="fs13" style="color:var(--t3)">${tal.length.toLocaleString()} companies</span>
+    </div>
+    <div class="tal-modal-list">
+      ${tal.map(t => `<span class="tag">${t}</span>`).join('')}
+    </div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:14px;width:100%" onclick="this.closest('.modal-overlay').remove()">Close</button>
+  </div>`;
+
+  document.body.appendChild(overlay);
+}
+
 window.setCampaignsTab     = setCampaignsTab;
 window.renderCampaigns     = renderCampaigns;
 window.viewCampaign        = viewCampaign;
@@ -326,3 +402,4 @@ window.deployLandingPage   = deployLandingPage;
 window.editCampaignRequest = editCampaignRequest;
 window.showNewCampaignForm = showNewCampaignForm;
 window.showDeployModal     = showDeployModal;
+window.showTALModal        = showTALModal;
