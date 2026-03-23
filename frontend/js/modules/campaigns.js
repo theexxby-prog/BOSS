@@ -112,12 +112,10 @@ function renderRequestCard(c, clientMap) {
   return `<div class="card rq-card" style="padding:0;overflow:hidden">
     <!-- Branded header strip -->
     <div class="rq-header" style="background:linear-gradient(135deg, ${brandColor}, ${brandSecondary})">
-      <div class="rq-header-left">
-        ${c.logo_url ? `<img src="${c.logo_url}" class="rq-logo" alt=""/>` : ''}
-        <div>
-          <div class="rq-name">${c.name}</div>
-          <div class="rq-client">${clientMap[c.client_id] || 'Unknown Client'}</div>
-        </div>
+      ${c.logo_url ? `<img src="${c.logo_url}" class="rq-logo" alt=""/>` : ''}
+      <div class="rq-header-text">
+        <div class="rq-name">${c.name}</div>
+        <div class="rq-client">${clientMap[c.client_id] || 'Unknown Client'}</div>
       </div>
       <span class="rq-badge">Pending Review</span>
     </div>
