@@ -69,7 +69,7 @@ async function renderAssets() {
 
 function showAddAsset() { alert('Asset upload form — coming in next build'); }
 function showAddPage()  { alert('Landing page builder — coming in next build'); }
-function previewPage(slug) { window.open(`http://localhost:8787/api/pages/${slug}`, '_blank'); }
+function previewPage(slug) { window.open(`https://boss-api.mehtahouse.cc/lp/${slug}`, '_blank'); }
 
 window.setAssetsTab  = setAssetsTab;
 window.renderAssets  = renderAssets;

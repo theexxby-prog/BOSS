@@ -41,14 +41,23 @@ export async function campaignsRouter(request: Request, env: Env, origin: string
     // POST /api/campaigns
     if (method === 'POST' && !id) {
       const body = await request.json() as Record<string, unknown>;
-      const { client_id, name, status = 'draft', target = 0, cpl, asset_name, asset_url, start_date, end_date, notes } = body;
+      const { client_id, name, status = 'draft', target = 0, cpl, asset_name, asset_url, start_date, end_date, notes,
+              tal, suppression_list, custom_questions, brand_color, brand_color_secondary, brand_accent, logo_url,
+              geo, industries, titles, company_sizes } = body as any;
       if (!client_id || !name || !cpl) {
         return jsonResponse({ success: false, error: 'Missing required fields: client_id, name, cpl' }, 400, origin);
       }
       const result = await dbRun(env.DB,
-        `INSERT INTO campaigns (client_id, name, status, target, cpl, asset_name, asset_url, start_date, end_date, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [client_id, name, status, target, cpl, asset_name ?? null, asset_url ?? null, start_date ?? null, end_date ?? null, notes ?? null]
+        `INSERT INTO campaigns (client_id, name, status, target, cpl, asset_name, asset_url, start_date, end_date, notes,
+         tal, suppression_list, custom_questions, brand_color, brand_color_secondary, brand_accent, logo_url,
+         geo, industries, titles, company_sizes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [client_id, name, status, target, cpl, asset_name ?? null, asset_url ?? null, start_date ?? null, end_date ?? null, notes ?? null,
+         tal ? JSON.stringify(tal) : null, suppression_list ? JSON.stringify(suppression_list) : null,
+         custom_questions ? JSON.stringify(custom_questions) : null,
+         brand_color ?? '#2563eb', brand_color_secondary ?? '#1e40af', brand_accent ?? '#3b82f6', logo_url ?? null,
+         geo ? JSON.stringify(geo) : null, industries ? JSON.stringify(industries) : null,
+         titles ? JSON.stringify(titles) : null, company_sizes ? JSON.stringify(company_sizes) : null]
       );
       const created = await dbFirst(env.DB, 'SELECT * FROM campaigns WHERE id = ?', [result.lastRowId]);
       return jsonResponse({ success: true, data: created }, 201, origin);
@@ -59,9 +68,15 @@ export async function campaignsRouter(request: Request, env: Env, origin: string
       const body = await request.json() as Record<string, unknown>;
       const fields: string[] = [];
       const values: unknown[] = [];
-      const allowed = ['name', 'status', 'target', 'delivered', 'accepted', 'rejected', 'cpl', 'asset_name', 'asset_url', 'start_date', 'end_date', 'notes'];
+      const allowed = ['name', 'status', 'target', 'delivered', 'accepted', 'rejected', 'cpl', 'asset_name', 'asset_url', 'start_date', 'end_date', 'notes',
+        'tal', 'suppression_list', 'custom_questions', 'brand_color', 'brand_color_secondary', 'brand_accent', 'logo_url',
+        'geo', 'industries', 'titles', 'company_sizes'];
+      const jsonFields = ['tal', 'suppression_list', 'custom_questions', 'geo', 'industries', 'titles', 'company_sizes'];
       for (const key of allowed) {
-        if (key in body) { fields.push(`${key} = ?`); values.push(body[key]); }
+        if (key in body) {
+          fields.push(`${key} = ?`);
+          values.push(jsonFields.includes(key) && typeof body[key] === 'object' ? JSON.stringify(body[key]) : body[key]);
+        }
       }
       if (!fields.length) return jsonResponse({ success: false, error: 'No fields to update' }, 400, origin);
       fields.push(`updated_at = datetime('now')`);

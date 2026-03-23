@@ -15,8 +15,9 @@ import { assetsRouter }     from './routes/assets';
 import { pagesRouter }      from './routes/pages';
 import { documentsRouter }  from './routes/documents';
 import { settingsRouter }   from './routes/settings';
-import { jobCardsRouter }   from './routes/job-cards';
-import { dbFirst, dbAll }   from './db';
+import { jobCardsRouter }      from './routes/job-cards';
+import { landingPageRenderer } from './routes/landing-page';
+import { dbFirst, dbAll }      from './db';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -26,6 +27,11 @@ export default {
 
     const url  = new URL(request.url);
     const path = url.pathname;
+
+    // ── Public landing pages — /lp/:slug ────────────────────────────────────
+    if (path.startsWith('/lp/')) {
+      return landingPageRenderer(request, env);
+    }
 
     // ── Health ──────────────────────────────────────────────────────────────
     if (path === '/api/health') {
