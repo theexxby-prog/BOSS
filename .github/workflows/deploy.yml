@@ -32,4 +32,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: fe2ae67928de1f5b18f1a7d1edf65005
-          command: pages deploy frontend --project-name boss-hq
+          command: pages deploy frontend --project-name boss-hq --branch main
