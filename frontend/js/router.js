@@ -48,6 +48,11 @@ function navigate(id) {
   });
   document.getElementById('topbar-title').textContent = MODULE_TITLES[id] || id;
   document.getElementById('topbar-sub').textContent   = MODULE_SUBS[id]   || '';
+  // Reset module-level drilldown state when navigating via sidebar
+  if (typeof State !== 'undefined') {
+    State.viewingCampaign = null;
+    State.campaignsTab = State.campaignsTab || 'active';
+  }
   renderModule(id);
   State.currentModule = id;
 }

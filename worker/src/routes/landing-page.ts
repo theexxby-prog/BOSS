@@ -258,19 +258,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .form-header { margin-bottom: 24px; }
     .form-header h2 { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
     .form-header .sub { color: rgba(255,255,255,0.45); font-size: 13px; }
-    .step-indicator {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 24px;
-    }
-    .step {
-      flex: 1;
-      height: 3px;
-      border-radius: 2px;
-      background: rgba(255,255,255,0.1);
-      transition: background 0.3s;
-    }
-    .step.active { background: ${brandAccent}; }
 
     .form-group { margin-bottom: 14px; }
     .form-group label {
@@ -517,63 +504,48 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
           <div class="sub">${assetName}</div>
         </div>
 
-        <div class="step-indicator">
-          <div class="step active" id="step1"></div>
-          <div class="step" id="step2"></div>
-        </div>
-
         <div id="form-section">
           <form id="lead-form">
-            <!-- Step 1: Contact Info -->
-            <div id="form-step-1">
-              <div class="row">
-                <div class="form-group">
-                  <label>First Name</label>
-                  <input type="text" name="first_name" required placeholder="John" />
-                </div>
-                <div class="form-group">
-                  <label>Last Name</label>
-                  <input type="text" name="last_name" required placeholder="Smith" />
-                </div>
+            <div class="row">
+              <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="first_name" required placeholder="John" />
               </div>
               <div class="form-group">
-                <label>Business Email</label>
-                <input type="email" name="email" required placeholder="john@company.com" />
+                <label>Last Name</label>
+                <input type="text" name="last_name" required placeholder="Smith" />
               </div>
-              <div class="row">
-                <div class="form-group">
-                  <label>Company</label>
-                  <input type="text" name="company" required placeholder="Acme Inc" />
-                </div>
-                <div class="form-group">
-                  <label>Job Title</label>
-                  <input type="text" name="title" required placeholder="VP Marketing" />
-                </div>
-              </div>
-              <div class="row">
-                <div class="form-group">
-                  <label>Phone</label>
-                  <input type="tel" name="phone" placeholder="+1 (555) 000-0000" />
-                </div>
-                <div class="form-group">
-                  <label>Country</label>
-                  <input type="text" name="country" placeholder="United States" />
-                </div>
-              </div>
-              ${customQuestions.length ? `<button type="button" class="btn-submit" onclick="goStep2()">Continue →</button>` : `<button type="submit" class="btn-submit">${ctaText}</button>`}
             </div>
-
-            <!-- Step 2: Qualifying Questions -->
-            ${customQuestions.length ? `<div id="form-step-2" style="display:none">
-              <div class="custom-section">
-                <h3>Almost there — just ${customQuestions.length} quick question${customQuestions.length > 1 ? 's' : ''}</h3>
-                ${customFieldsHtml}
+            <div class="form-group">
+              <label>Business Email</label>
+              <input type="email" name="email" required placeholder="john@company.com" />
+            </div>
+            <div class="row">
+              <div class="form-group">
+                <label>Company</label>
+                <input type="text" name="company" required placeholder="Acme Inc" />
               </div>
-              <button type="submit" class="btn-submit">${ctaText}</button>
-              <div style="text-align:center;margin-top:10px">
-                <a href="#" onclick="goStep1();return false" style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none">← Back</a>
+              <div class="form-group">
+                <label>Job Title</label>
+                <input type="text" name="title" required placeholder="VP Marketing" />
               </div>
+            </div>
+            <div class="row">
+              <div class="form-group">
+                <label>Phone</label>
+                <input type="tel" name="phone" placeholder="+1 (555) 000-0000" />
+              </div>
+              <div class="form-group">
+                <label>Country</label>
+                <input type="text" name="country" placeholder="United States" />
+              </div>
+            </div>
+            ${customQuestions.length ? `<hr class="divider"/>
+            <div class="custom-section">
+              <h3>A few quick questions</h3>
+              ${customFieldsHtml}
             </div>` : ''}
+            <button type="submit" class="btn-submit">${ctaText}</button>
           </form>
           <div class="consent">By downloading, you agree to receive relevant communications. You can unsubscribe at any time. <a href="#">Privacy Policy</a></div>
         </div>
@@ -609,25 +581,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   <div class="footer">Powered by BOSS HQ · All rights reserved</div>
 
   <script>
-    // Step navigation
-    function goStep2() {
-      const step1 = document.getElementById('form-step-1');
-      const required = step1.querySelectorAll('[required]');
-      let valid = true;
-      required.forEach(f => { if (!f.value.trim()) { f.style.borderColor='#ef4444'; valid=false; } else { f.style.borderColor='#10b981'; } });
-      if (!valid) return;
-      step1.style.display = 'none';
-      document.getElementById('form-step-2').style.display = 'block';
-      document.getElementById('step1').classList.remove('active');
-      document.getElementById('step2').classList.add('active');
-    }
-    function goStep1() {
-      document.getElementById('form-step-2').style.display = 'none';
-      document.getElementById('form-step-1').style.display = 'block';
-      document.getElementById('step2').classList.remove('active');
-      document.getElementById('step1').classList.add('active');
-    }
-
     // Inline validation
     document.querySelectorAll('.form-group input').forEach(input => {
       input.addEventListener('blur', function() {
