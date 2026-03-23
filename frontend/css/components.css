@@ -187,6 +187,7 @@ td.muted   { color: var(--text-secondary); }
 
 /* ── Forms ──────────────────────────────────────────────────────────────── */
 .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-row   { display: flex; flex-direction: column; gap: 6px; }
 .form-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
 .form-hint  { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 

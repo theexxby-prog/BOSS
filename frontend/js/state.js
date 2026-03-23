@@ -10,6 +10,8 @@ const State = {
   campaignsTab:  'active',
   viewingCampaign: null,
   assetsTab:     'assets',
+  assetClientFilter: '',
+  assetCampaignFilter: '',
   docsTab:       'all',
 };
 
