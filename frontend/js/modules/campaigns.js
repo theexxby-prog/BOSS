@@ -42,26 +42,57 @@ async function renderCampaigns() {
     </div>`;
   }
 
-  // Active/other tabs → compact campaign rows
+  // Active/other tabs → campaign cards
   const campaignRows = filtered.length ? filtered.map(c => {
-    const brandColor = c.brand_color || 'var(--acc)';
+    const bc = c.brand_color || '#2563eb';
+    const bs = c.brand_color_secondary || '#1e40af';
+    const ba = c.brand_accent || bc;
     const pct = Math.min(100, Math.round(((c.delivered||0) / Math.max(c.target, 1)) * 100));
-    return `<div class="cr" onclick="viewCampaign(${c.id})" style="border-left:3px solid ${brandColor}">
-      <div class="cr-main">
-        <div class="cr-id">
-          ${c.logo_url ? `<img src="${c.logo_url}" class="cr-logo"/>` : `<div class="cr-logo-ph" style="background:${brandColor}22;color:${brandColor}">${(c.name||'C')[0]}</div>`}
-          <div class="cr-name">${c.name}</div>
-          <span class="fs12" style="color:var(--t3)">${clientMap[c.client_id]||''}</span>
+    const budget = (c.target||0)*(c.cpl||0);
+    const acceptClass = c.acceptance_rate>=90?'clr-grn':c.acceptance_rate>=75?'clr-yel':'clr-red';
+    return `<div class="cmp-card" onclick="viewCampaign(${c.id})">
+      <div class="cmp-card-accent" style="background:linear-gradient(135deg,${bc},${bs})"></div>
+      <div class="cmp-card-body">
+        <div class="cmp-card-top">
+          <div class="cmp-card-identity">
+            ${c.logo_url
+              ? `<img src="${c.logo_url}" class="cmp-card-logo"/>`
+              : `<div class="cmp-card-logo-ph" style="background:${bc}22;color:${bc}">${(c.name||'C')[0]}</div>`}
+            <div>
+              <div class="cmp-card-name">${c.name}</div>
+              <div class="cmp-card-client">${clientMap[c.client_id]||''}</div>
+            </div>
+          </div>
+          <div class="cmp-card-right">
+            ${statusBadge(c.status)}
+            <div class="cmp-card-dates">${fmtDate(c.start_date)} → ${fmtDate(c.end_date)}</div>
+          </div>
         </div>
-        <div class="cr-stats">
-          ${statusBadge(c.status)}
-          <div class="cr-stat"><span class="cr-stat-v">${c.delivered||0}<span class="cr-stat-d">/${c.target}</span></span><span class="cr-stat-l">leads</span></div>
-          <div class="cr-stat"><span class="cr-stat-v clr-grn">$${c.cpl}</span><span class="cr-stat-l">CPL</span></div>
-          <div class="cr-stat"><span class="cr-stat-v ${c.acceptance_rate>=90?'clr-grn':c.acceptance_rate>=75?'clr-yel':'clr-red'}">${c.acceptance_rate||0}%</span><span class="cr-stat-l">accept</span></div>
-          <div class="cr-stat"><span class="cr-stat-v fs12" style="color:var(--t3)">${fmtDate(c.start_date)} → ${fmtDate(c.end_date)}</span><span class="cr-stat-l">period</span></div>
+        <div class="cmp-card-stats">
+          <div class="cmp-card-stat">
+            <div class="cmp-card-stat-v">${(c.delivered||0).toLocaleString()}<span class="cmp-card-stat-of">/${(c.target||0).toLocaleString()}</span></div>
+            <div class="cmp-card-stat-l">Leads Delivered</div>
+          </div>
+          <div class="cmp-card-stat">
+            <div class="cmp-card-stat-v clr-grn">$${c.cpl||0}</div>
+            <div class="cmp-card-stat-l">Cost per Lead</div>
+          </div>
+          <div class="cmp-card-stat">
+            <div class="cmp-card-stat-v ${ acceptClass}">${c.acceptance_rate||0}%</div>
+            <div class="cmp-card-stat-l">Acceptance Rate</div>
+          </div>
+          <div class="cmp-card-stat">
+            <div class="cmp-card-stat-v">$${budget.toLocaleString()}</div>
+            <div class="cmp-card-stat-l">Total Budget</div>
+          </div>
+        </div>
+        <div class="cmp-card-progress-wrap">
+          <div class="cmp-card-progress-bar">
+            <div class="cmp-card-progress-fill" style="width:${pct}%;background:${ba}"></div>
+          </div>
+          <span class="cmp-card-pct">${pct}%</span>
         </div>
       </div>
-      <div style="height:3px;background:var(--bg3);border-radius:2px;margin-top:10px"><div style="height:100%;width:${pct}%;background:${brandColor};border-radius:2px"></div></div>
     </div>`;
   }).join('')
   : `<div class="card" style="text-align:center;padding:40px;color:var(--t3)">No ${State.campaignsTab === 'all' ? '' : State.campaignsTab + ' '}campaigns yet.</div>`;
@@ -74,7 +105,7 @@ async function renderCampaigns() {
       ${kpi('Pipeline Value', '$'+totalValue.toLocaleString(), null, 'delivered × CPL', '💰', 'var(--yel)')}
     </div>
     <div class="sec-hdr mb16"><div class="tabs" style="margin:0">${tabHtml}</div><button class="btn btn-pri btn-sm" onclick="showNewCampaignForm()">+ New Campaign</button></div>
-    <div style="display:flex;flex-direction:column;gap:8px">${campaignRows}</div>
+    <div style="display:flex;flex-direction:column;gap:16px">${campaignRows}</div>
   </div>`;
 }
 
