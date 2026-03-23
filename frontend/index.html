@@ -5,20 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BOSS HQ — Business Operating Single System</title>
 
-  <link rel="stylesheet" href="css/variables.css?v=3"/>
-  <link rel="stylesheet" href="css/layout.css?v=3"/>
-  <link rel="stylesheet" href="css/components.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/hq.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/leads.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/clients.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/finance.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/social.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/bd.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/ops.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/campaigns.css?v=5"/>
-  <link rel="stylesheet" href="css/modules/assets.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/documents.css?v=3"/>
-  <link rel="stylesheet" href="css/modules/settings.css?v=3"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="css/variables.css?v=4"/>
+  <link rel="stylesheet" href="css/layout.css?v=4"/>
+  <link rel="stylesheet" href="css/components.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/hq.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/leads.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/clients.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/finance.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/social.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/bd.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/ops.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/campaigns.css?v=6"/>
+  <link rel="stylesheet" href="css/modules/assets.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/documents.css?v=4"/>
+  <link rel="stylesheet" href="css/modules/settings.css?v=4"/>
 </head>
 <body>
 <div class="app">
@@ -27,72 +31,72 @@
   <div class="sidebar">
     <div class="logo-wrap">
       <div class="logo-icon">
-        <svg viewBox="0 0 36 36" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18 2C10.3 2 4 7.6 4 14.5c0 4.2 2.4 7.9 6 10.2V28a2 2 0 002 2h1v3a1 1 0 001 1h2a1 1 0 001-1v-3h2v3a1 1 0 001 1h2a1 1 0 001-1v-3h1a2 2 0 002-2v-3.3c3.6-2.3 6-6 6-10.2C32 7.6 25.7 2 18 2z" fill="#fff"/>
-          <ellipse cx="12.5" cy="14" rx="3.5" ry="4" fill="#1a1a2e"/>
-          <ellipse cx="23.5" cy="14" rx="3.5" ry="4" fill="#1a1a2e"/>
-          <path d="M15 22v4M18 22v4M21 22v4" stroke="#1a1a2e" stroke-width="1.8" stroke-linecap="round"/>
-          <path d="M10 19.5c2.5 2 5.3 3 8 3s5.5-1 8-3" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        <svg viewBox="0 0 36 36" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 2C10.3 2 4 7.6 4 14.5c0 4.2 2.4 7.9 6 10.2V28a2 2 0 002 2h1v3a1 1 0 001 1h2a1 1 0 001-1v-3h2v3a1 1 0 001 1h2a1 1 0 001-1v-3h1a2 2 0 002-2v-3.3c3.6-2.3 6-6 6-10.2C32 7.6 25.7 2 18 2z" fill="var(--text-primary)"/>
+          <ellipse cx="12.5" cy="14" rx="3.5" ry="4" fill="var(--bg-page)"/>
+          <ellipse cx="23.5" cy="14" rx="3.5" ry="4" fill="var(--bg-page)"/>
+          <path d="M15 22v4M18 22v4M21 22v4" stroke="var(--bg-page)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M10 19.5c2.5 2 5.3 3 8 3s5.5-1 8-3" stroke="var(--bg-page)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
         </svg>
       </div>
       <div>
         <div class="logo-name">BOSS</div>
-        <div class="logo-sub">Business Operating Single System</div>
+        <div class="logo-sub">Business OS</div>
       </div>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Command</div>
       <div class="nav-item active" data-module="overview" onclick="navigate('overview')">
-        <span class="nav-icon">🏠</span> HQ Overview
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> HQ Overview
       </div>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Pipeline</div>
       <div class="nav-item" data-module="campaigns" onclick="navigate('campaigns')">
-        <span class="nav-icon">📋</span> Campaigns
-        <span class="nav-badge" id="campaign-badge"></span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span> Campaigns
+        <span class="nav-badge" id="campaign-badge" style="display:none"></span>
       </div>
       <div class="nav-item" data-module="leads" onclick="navigate('leads')">
-        <span class="nav-icon">🎯</span> Lead Operations
-        <span class="nav-badge" id="qa-badge"></span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="12"/></svg></span> Lead Operations
+        <span class="nav-badge" id="qa-badge" style="display:none"></span>
       </div>
       <div class="nav-item" data-module="clients" onclick="navigate('clients')">
-        <span class="nav-icon">🤝</span> Client Management
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> Clients
       </div>
       <div class="nav-item" data-module="assets" onclick="navigate('assets')">
-        <span class="nav-icon">🗂️</span> Assets &amp; Pages
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> Assets
       </div>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Business</div>
       <div class="nav-item" data-module="finance" onclick="navigate('finance')">
-        <span class="nav-icon">💰</span> Finance &amp; P&amp;L
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> Finance
       </div>
       <div class="nav-item" data-module="documents" onclick="navigate('documents')">
-        <span class="nav-icon">📄</span> Documents
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Documents
       </div>
       <div class="nav-item" data-module="bd" onclick="navigate('bd')">
-        <span class="nav-icon">📈</span> BD Pipeline
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span> BD Pipeline
       </div>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Growth</div>
       <div class="nav-item" data-module="social" onclick="navigate('social')">
-        <span class="nav-icon">📢</span> Social Command
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span> Social
       </div>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">System</div>
       <div class="nav-item" data-module="ops" onclick="navigate('ops')">
-        <span class="nav-icon">⚙️</span> Operations Centre
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span> Operations
       </div>
       <div class="nav-item" data-module="settings" onclick="navigate('settings')">
-        <span class="nav-icon">🔧</span> Settings
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></span> Settings
       </div>
     </div>
 
@@ -116,10 +120,14 @@
         <span class="topbar-sub"   id="topbar-sub">Your complete business at a glance</span>
       </div>
       <div class="topbar-right">
-        <div class="date-chip" id="date-chip">📅 Loading...</div>
-        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
-        <div class="notif-btn">🔔<div class="notif-pip"></div></div>
-        <button class="btn btn-pri btn-sm">🤖 Ask Claude</button>
+        <div class="date-chip" id="date-chip">Loading...</div>
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+        <button class="btn-icon notif-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <div class="notif-pip"></div>
+        </button>
       </div>
     </div>
     <div class="content" id="content"></div>
@@ -127,24 +135,30 @@
 
 </div>
 
+<!-- Ask Claude floating button -->
+<button class="ask-claude-btn" onclick="alert('Ask Claude — coming soon')">
+  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+  Ask Claude
+</button>
+
 <!-- ── JAVASCRIPT ─────────────────────────────────────────────────────────── -->
-<script src="js/api.js?v=3"></script>
-<script src="js/state.js?v=3"></script>
-<script src="js/components/kpi.js?v=3"></script>
-<script src="js/components/chart.js?v=3"></script>
-<script src="js/components/table.js?v=3"></script>
-<script src="js/modules/hq.js?v=3"></script>
-<script src="js/modules/campaigns.js?v=5"></script>
-<script src="js/modules/leads.js?v=3"></script>
-<script src="js/modules/clients.js?v=3"></script>
-<script src="js/modules/assets.js?v=3"></script>
-<script src="js/modules/finance.js?v=3"></script>
-<script src="js/modules/documents.js?v=3"></script>
-<script src="js/modules/social.js?v=3"></script>
-<script src="js/modules/bd.js?v=3"></script>
-<script src="js/modules/ops.js?v=3"></script>
-<script src="js/modules/settings.js?v=3"></script>
-<script src="js/router.js?v=4"></script>
-<script src="js/main.js"></script>
+<script src="js/api.js?v=4"></script>
+<script src="js/state.js?v=4"></script>
+<script src="js/components/kpi.js?v=4"></script>
+<script src="js/components/chart.js?v=4"></script>
+<script src="js/components/table.js?v=4"></script>
+<script src="js/modules/hq.js?v=4"></script>
+<script src="js/modules/campaigns.js?v=6"></script>
+<script src="js/modules/leads.js?v=4"></script>
+<script src="js/modules/clients.js?v=4"></script>
+<script src="js/modules/assets.js?v=4"></script>
+<script src="js/modules/finance.js?v=4"></script>
+<script src="js/modules/documents.js?v=4"></script>
+<script src="js/modules/social.js?v=4"></script>
+<script src="js/modules/bd.js?v=4"></script>
+<script src="js/modules/ops.js?v=4"></script>
+<script src="js/modules/settings.js?v=4"></script>
+<script src="js/router.js?v=5"></script>
+<script src="js/main.js?v=4"></script>
 </body>
 </html>

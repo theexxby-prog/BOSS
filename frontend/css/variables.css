@@ -1,102 +1,125 @@
-/* BOSS HQ — Design Tokens */
+/* BOSS HQ — Design Tokens (Productive.io benchmark) */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Backgrounds — neutral dark, no purple tint */
-  --bg:    #0e0f13;
-  --bg2:   #13151b;
-  --card:  #191c24;
-  --card2: #1e2130;
+  /* Brand */
+  --blue-600:    #3B5BDB;
+  --blue-100:    #EDF2FF;
+  --blue-800:    #1E3A8A;
 
-  /* Borders — subtle, visible */
-  --brd:  #2a2d3a;
-  --brd2: #363a4f;
+  /* Surfaces — 3 levels */
+  --bg-page:     #F8F9FA;
+  --bg-card:     #FFFFFF;
+  --bg-muted:    #F1F3F5;
 
-  /* Accent */
-  --acc:  #7c73ff;
-  --acc2: rgba(124, 115, 255, .14);
-  --acc3: rgba(124, 115, 255, .28);
+  /* Text */
+  --text-primary:   #1C1C1E;
+  --text-secondary: #6B7280;
+  --text-tertiary:  #9CA3AF;
 
-  /* Semantic colors — vivid enough to read on dark bg */
-  --grn:  #2ecc71;  --grn2: rgba(46,  204, 113, .13);
-  --red:  #f05252;  --red2: rgba(240, 82,  82,  .13);
-  --yel:  #f6ad3c;  --yel2: rgba(246, 173, 60,  .13);
-  --blu:  #4f93f6;  --blu2: rgba(79,  147, 246, .13);
-  --cyn:  #14b8c8;  --cyn2: rgba(20,  184, 200, .13);
+  /* Borders — 0.5px */
+  --border:       rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.18);
 
-  /* Text — high contrast hierarchy */
-  --t1: #e8eaf0;   /* primary: near-white, easy on the eyes */
-  --t2: #9da3bc;   /* secondary: clearly visible */
-  --t3: #636878;   /* muted: labels, timestamps */
+  /* Semantic */
+  --green-600:  #2F9E44;
+  --green-100:  #EBFBEE;
+  --amber-600:  #E67700;
+  --amber-100:  #FFF9DB;
+  --red-600:    #E03131;
+  --red-100:    #FFF5F5;
+  --gray-600:   #6B7280;
+  --gray-100:   #F3F4F6;
+
+  /* Radii */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
 
   /* Layout */
-  --sidebar-w: 240px;
-  --topbar-h:  56px;
+  --sidebar-w: 200px;
+  --topbar-h:  48px;
+
+  /* ── Legacy aliases (backward compat for existing JS/CSS) ── */
+  --bg:    var(--bg-page);
+  --bg2:   var(--bg-muted);
+  --card:  var(--bg-card);
+  --card2: var(--bg-muted);
+  --brd:   var(--border);
+  --brd2:  var(--border-strong);
+  --acc:   var(--blue-600);
+  --acc2:  var(--blue-100);
+  --acc3:  rgba(59, 91, 219, 0.28);
+  --grn:   var(--green-600);
+  --grn2:  var(--green-100);
+  --red:   var(--red-600);
+  --red2:  var(--red-100);
+  --yel:   var(--amber-600);
+  --yel2:  var(--amber-100);
+  --blu:   var(--blue-600);
+  --blu2:  var(--blue-100);
+  --cyn:   #0891b2;
+  --cyn2:  rgba(8, 145, 178, 0.11);
+  --t1:    var(--text-primary);
+  --t2:    var(--text-secondary);
+  --t3:    var(--text-tertiary);
+}
+
+/* ── Dark Mode ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-page:        #111113;
+  --bg-card:        #1C1C1E;
+  --bg-muted:       #28282C;
+  --text-primary:   #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-tertiary:  #71717A;
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.14);
+  --blue-100:       rgba(59, 91, 219, 0.15);
+  --green-100:      rgba(47, 158, 68, 0.15);
+  --amber-100:      rgba(230, 119, 0, 0.15);
+  --red-100:        rgba(224, 49, 49, 0.15);
+  --gray-100:       rgba(255, 255, 255, 0.06);
+
+  /* Legacy aliases update for dark */
+  --acc3:  rgba(59, 91, 219, 0.28);
+  --cyn2:  rgba(8, 145, 178, 0.15);
+}
+
+/* Also support the old light-mode selector */
+[data-theme="light"] {
+  --bg-page:     #F8F9FA;
+  --bg-card:     #FFFFFF;
+  --bg-muted:    #F1F3F5;
+  --text-primary:   #1C1C1E;
+  --text-secondary: #6B7280;
+  --text-tertiary:  #9CA3AF;
+  --border:       rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --blue-100:    #EDF2FF;
+  --green-100:   #EBFBEE;
+  --amber-100:   #FFF9DB;
+  --red-100:     #FFF5F5;
+  --gray-100:    #F3F4F6;
 }
 
 html, body {
   height: 100%;
-  background: var(--bg);
-  /* Inter → SF Pro → Segoe UI → system — prioritises clean geometric sans */
+  background: var(--bg-page);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
-  line-height: 1.5;
-  color: var(--t1);
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--text-primary);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: var(--brd2); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-
-/* ── Light Mode ─────────────────────────────────────────────────────────── */
-[data-theme="light"] {
-  --bg:    #f0f2f8;
-  --bg2:   #e4e7f2;
-  --card:  #ffffff;
-  --card2: #f2f4fb;
-
-  --brd:  #d4d8ec;
-  --brd2: #bec3dc;
-
-  --acc:  #6058e8;
-  --acc2: rgba(96, 88, 232, .12);
-  --acc3: rgba(96, 88, 232, .25);
-
-  --grn:  #16a34a;  --grn2: rgba(22,  163, 74,  .12);
-  --red:  #dc2626;  --red2: rgba(220, 38,  38,  .10);
-  --yel:  #d97706;  --yel2: rgba(217, 119, 6,   .12);
-  --blu:  #2563eb;  --blu2: rgba(37,  99,  235, .11);
-  --cyn:  #0891b2;  --cyn2: rgba(8,   145, 178, .11);
-
-  --t1: #111827;
-  --t2: #374151;
-  --t3: #6b7280;
-}
-
-[data-theme="light"] html,
-[data-theme="light"] body,
-body[data-theme="light"] {
-  background: var(--bg);
-  color: var(--t1);
-}
-
-/* Light mode: brief card gradient override */
-[data-theme="light"] .brief-card {
-  background: linear-gradient(135deg, rgba(96,88,232,.07), rgba(96,88,232,.02));
-  border-color: rgba(96, 88, 232, .2);
-}
-
-/* Light mode: notif button pip border matches bg */
-[data-theme="light"] .notif-pip { border-color: var(--bg2); }
-
-/* Light mode: table hover */
-[data-theme="light"] tbody tr:hover td { background: var(--card2); }
-
-/* Light mode: input */
-[data-theme="light"] .input { background: #f8faff; }
-
-/* Light mode: ops automation mode card */
-[data-theme="light"] .brief-dot { opacity: .85; }

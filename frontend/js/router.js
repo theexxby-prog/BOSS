@@ -64,7 +64,7 @@ async function renderModule(id) {
   const renderer = MODULE_RENDERERS[id] || MODULE_RENDERERS.overview;
   const result   = renderer();
   if (result instanceof Promise) {
-    el.innerHTML = '<div style="padding:60px;text-align:center;color:var(--t3);font-size:14px">Loading…</div>';
+    el.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-tertiary);font-size:13px">Loading…</div>';
     el.innerHTML = await result;
   } else {
     el.innerHTML = result;

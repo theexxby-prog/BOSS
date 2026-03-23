@@ -1,3 +1,7 @@
-/* Client Management — Client cards */
-.client-card       { background: var(--card); border: 1px solid var(--brd); border-radius: 12px; padding: 18px; cursor: pointer; transition: .15s; }
-.client-card:hover { border-color: var(--brd2); transform: translateY(-1px); }
+/* Client Management */
+.client-card       { cursor: pointer; transition: border-color 0.15s; }
+.client-card:hover { border-color: var(--border-strong); }
+.client-grid       { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.client-hdr        { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.client-avatar     { width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--blue-100); color: var(--blue-600); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; flex-shrink: 0; }
+.client-name       { font-size: 14px; font-weight: 500; }
