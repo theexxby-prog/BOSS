@@ -9,6 +9,8 @@ import type {
   BillingCampaign,
   ClientBilling,
   ClientIntegration,
+  ClientUser,
+  CampaignRequest,
   LeadRecord,
   InvoiceRecord,
   InvoiceLineItem,
@@ -132,6 +134,75 @@ const integrationConfigs: ClientIntegration[] = [
     acceptance_source: 'hubspot',
     config:            { portal_id: 'hs-98312', api_key: 'hs-meridian-live-key' },
   },
+]
+
+// Campaign requests — pending intake queue before campaigns are created.
+// One approved request (cr1) links to camp1. Two pending requests to demo the queue.
+const campaignRequests: CampaignRequest[] = [
+  {
+    id:           'cr1',
+    client_id:    'c1',
+    name:         'Q1 VC Partner Outreach',
+    billing_type: 'per_lead',
+    unit_price:   150,
+    notes:        'Target senior partners at Series A/B focused VC firms in NYC and Boston.',
+    requested_by: 'Jonathan Reeves',
+    status:       'approved',
+    campaign_id:  'camp1',
+    reviewed_by:  'Vishal Mehta',
+    review_notes: 'Approved. Unit price confirmed at £150/lead.',
+    created_at:   '2026-01-18',
+    reviewed_at:  '2026-01-20',
+  },
+  {
+    id:           'cr2',
+    client_id:    'c2',
+    name:         'APAC Expansion — Singapore & Sydney',
+    billing_type: 'per_lead',
+    unit_price:   220,
+    notes:        'Looking to reach VP Engineering and CTO personas in SaaS companies 50-500 employees.',
+    requested_by: 'Priya Anand',
+    status:       'pending',
+    campaign_id:  null,
+    reviewed_by:  null,
+    review_notes: null,
+    created_at:   '2026-03-18',
+    reviewed_at:  null,
+  },
+  {
+    id:           'cr3',
+    client_id:    'c3',
+    name:         'UK Mid-Market Demand Gen — Q2',
+    billing_type: 'retainer',
+    unit_price:   null,
+    notes:        'Continuation of Q1 retainer. Targeting 200 contacts/month across BFSI vertical.',
+    requested_by: 'Ben Howarth',
+    status:       'pending',
+    campaign_id:  null,
+    reviewed_by:  null,
+    review_notes: null,
+    created_at:   '2026-03-21',
+    reviewed_at:  null,
+  },
+]
+
+// Client users — team members per client. No auth; role is informational only.
+const clientUsers: ClientUser[] = [
+  // Apex Ventures (c1)
+  { id: 'cu1-01', client_id: 'c1', name: 'Jonathan Reeves',  email: 'j.reeves@apexventures.com',  role: 'admin',            created_at: '2026-01-10' },
+  { id: 'cu1-02', client_id: 'c1', name: 'Patricia Lim',     email: 'p.lim@apexventures.com',     role: 'campaign_manager', created_at: '2026-01-12' },
+  { id: 'cu1-03', client_id: 'c1', name: 'Marcus Webb',      email: 'm.webb@apexventures.com',    role: 'finance',          created_at: '2026-01-12' },
+  { id: 'cu1-04', client_id: 'c1', name: 'Diana Cross',      email: 'd.cross@apexventures.com',   role: 'viewer',           created_at: '2026-01-15' },
+
+  // NovaTech Solutions (c2)
+  { id: 'cu2-01', client_id: 'c2', name: 'Priya Anand',      email: 'p.anand@novatech.io',        role: 'admin',            created_at: '2026-01-15' },
+  { id: 'cu2-02', client_id: 'c2', name: 'James Holloway',   email: 'j.holloway@novatech.io',     role: 'campaign_manager', created_at: '2026-01-16' },
+  { id: 'cu2-03', client_id: 'c2', name: 'Sara Okonkwo',     email: 's.okonkwo@novatech.io',      role: 'finance',          created_at: '2026-01-16' },
+
+  // Meridian Growth Partners (c3)
+  { id: 'cu3-01', client_id: 'c3', name: 'Sophie Laurent',   email: 's.laurent@meridiangrowth.com', role: 'admin',          created_at: '2026-02-01' },
+  { id: 'cu3-02', client_id: 'c3', name: 'Ben Howarth',      email: 'b.howarth@meridiangrowth.com', role: 'campaign_manager', created_at: '2026-02-02' },
+  { id: 'cu3-03', client_id: 'c3', name: 'Claire Fontaine',  email: 'c.fontaine@meridiangrowth.com',role: 'viewer',         created_at: '2026-02-03' },
 ]
 
 // Camp 1 — 30 leads: 14 accepted (manual), 6 rejected (manual), 10 pending
@@ -327,6 +398,52 @@ export const mockProvider: DataProvider = {
     if (patch.delivery_method !== undefined) config.delivery_method = patch.delivery_method
     if (patch.config          !== undefined) config.config          = patch.config
     return config
+  },
+
+  // ── Campaign Requests ─────────────────────────────────────────────────────
+
+  listCampaignRequests(filters) {
+    let result = [...campaignRequests]
+    if (filters?.client_id) result = result.filter(r => r.client_id === filters.client_id)
+    if (filters?.status)    result = result.filter(r => r.status === filters.status)
+    return result
+  },
+
+  getCampaignRequest(id) {
+    return campaignRequests.find(r => r.id === id) ?? null
+  },
+
+  createCampaignRequest(data) {
+    const request: CampaignRequest = { ...data, id: uid(), created_at: now() }
+    campaignRequests.push(request)
+    return request
+  },
+
+  updateCampaignRequest(id, patch) {
+    const request = campaignRequests.find(r => r.id === id)
+    if (!request) return null
+    Object.assign(request, patch)
+    return request
+  },
+
+  // ── Campaigns ─────────────────────────────────────────────────────────────
+
+  createCampaign(data) {
+    const campaign: BillingCampaign = { ...data, id: uid(), created_at: now() }
+    campaigns.push(campaign)
+    return campaign
+  },
+
+  // ── Client Users ──────────────────────────────────────────────────────────
+
+  getUsersByClient(clientId) {
+    return clientUsers.filter(u => u.client_id === clientId)
+  },
+
+  addUserToClient(data) {
+    const user: ClientUser = { ...data, id: uid(), created_at: now() }
+    clientUsers.push(user)
+    return user
   },
 
   // ── Campaigns ─────────────────────────────────────────────────────────────

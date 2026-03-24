@@ -12,12 +12,15 @@ import type {
   BillingCampaign,
   ClientBilling,
   ClientIntegration,
+  ClientUser,
+  CampaignRequest,
   LeadRecord,
   InvoiceRecord,
   BillingPayment,
   LeadStatus,
   InvoiceStatus,
   AcceptanceSource,
+  CampaignRequestStatus,
 } from './types'
 
 export interface DataProvider {
@@ -43,9 +46,21 @@ export interface DataProvider {
     patch: Pick<ClientIntegration, 'delivery_method' | 'config'>
   ): ClientIntegration | null
 
+  // ─── Client Users ────────────────────────────────────────────────────────
+  // Team members associated with a client. No auth — data structure only.
+  getUsersByClient(clientId: string): ClientUser[]
+  addUserToClient(data: Omit<ClientUser, 'id' | 'created_at'>): ClientUser
+
+  // ─── Campaign Requests ───────────────────────────────────────────────────
+  listCampaignRequests(filters?: { client_id?: string; status?: CampaignRequestStatus }): CampaignRequest[]
+  getCampaignRequest(id: string): CampaignRequest | null
+  createCampaignRequest(data: Omit<CampaignRequest, 'id' | 'created_at'>): CampaignRequest
+  updateCampaignRequest(id: string, patch: Partial<CampaignRequest>): CampaignRequest | null
+
   // ─── Campaigns ───────────────────────────────────────────────────────────
   listCampaigns(clientId?: string): BillingCampaign[]
   getCampaign(id: string): BillingCampaign | null
+  createCampaign(data: Omit<BillingCampaign, 'id' | 'created_at'>): BillingCampaign
 
   // ─── Leads ───────────────────────────────────────────────────────────────
   listLeads(filters?: { campaign_id?: string; status?: LeadStatus }): LeadRecord[]

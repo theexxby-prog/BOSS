@@ -7,6 +7,38 @@ export type BillingType      = 'per_lead' | 'flat_fee' | 'retainer'
 export type AcceptanceSource = 'convertr' | 'hubspot' | 'manual'
 export type ClientStatus     = 'active' | 'paused'
 export type ClientType       = 'direct' | 'agency'
+export type ClientUserRole   = 'admin' | 'campaign_manager' | 'finance' | 'viewer'
+
+export interface ClientUser {
+  id:         string
+  client_id:  string
+  name:       string
+  email:      string
+  role:       ClientUserRole
+  created_at: string
+}
+
+export type CampaignRequestStatus = 'pending' | 'approved' | 'rejected'
+
+// ─── Campaign Request ─────────────────────────────────────────────────────────
+
+// A request to launch a new campaign. Approved requests create a BillingCampaign.
+// campaign_id is set on approval — null until then.
+export interface CampaignRequest {
+  id:              string
+  client_id:       string
+  name:            string              // proposed campaign name
+  billing_type:    BillingType
+  unit_price:      number | null       // required for per_lead; null for retainer/flat_fee
+  notes:           string | null       // brief from requestor
+  requested_by:    string              // name or email of requestor
+  status:          CampaignRequestStatus
+  campaign_id:     string | null       // set on approval; links to the created BillingCampaign
+  reviewed_by:     string | null       // internal BOSS team member
+  review_notes:    string | null       // reason for rejection or approval notes
+  created_at:      string
+  reviewed_at:     string | null
+}
 
 // Primary point of contact at the client — used for comms, not auth.
 export interface ClientContact {
