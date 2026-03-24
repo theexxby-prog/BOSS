@@ -1,9 +1,10 @@
 // BOSS HQ — Revenue System Types
 // Used by MockDataProvider and (future) RealDataProvider
 
-export type LeadStatus    = 'pending' | 'delivered' | 'accepted' | 'rejected'
-export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid'
-export type BillingType   = 'per_lead' | 'flat_fee' | 'retainer'
+export type LeadStatus       = 'pending' | 'delivered' | 'accepted' | 'rejected'
+export type InvoiceStatus    = 'draft' | 'sent' | 'partial' | 'paid'
+export type BillingType      = 'per_lead' | 'flat_fee' | 'retainer'
+export type AcceptanceSource = 'convertr' | 'hubspot' | 'manual'
 
 export interface BillingClient {
   id:         string
@@ -26,12 +27,15 @@ export interface LeadRecord {
   id:                   string
   campaign_id:          string
   name:                 string
-  email:                string       // natural dedup key
+  email:                string             // natural dedup key
+  external_id:          string | null      // ID used by external systems (Convertr, HubSpot); used for webhook mapping
   status:               LeadStatus
   delivered_at:         string | null
   accepted_at:          string | null
-  invoice_id:           string | null  // null = eligible for invoicing; non-null = already invoiced
-  price_at_acceptance:  number | null  // snapshot of unit_price at time of acceptance; null until accepted
+  rejected_at:          string | null      // set when status → rejected
+  acceptance_source:    AcceptanceSource | null  // who made the accept/reject decision; immutable after invoicing
+  invoice_id:           string | null      // null = eligible for invoicing; non-null = already invoiced
+  price_at_acceptance:  number | null      // snapshot of unit_price at time of acceptance; null until accepted
   created_at:           string
 }
 

@@ -3,7 +3,7 @@
 // No direct store access — uses DataProvider only.
 
 import type { DataProvider } from '../providers/DataProvider'
-import type { LeadRecord } from '../providers/types'
+import type { LeadRecord, AcceptanceSource } from '../providers/types'
 
 // ─── Error Types ─────────────────────────────────────────────────────────────
 
@@ -21,12 +21,12 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-// ─── Invoice Lock Guard ──────────────────────────────────────────────────────
+// ─── Guards ───────────────────────────────────────────────────────────────────
 
 /**
  * Throws if the lead has already been linked to an invoice.
- * Financial fields (status, price_at_acceptance) must not change after invoicing.
- * Contact fields (name, email) are not blocked — they are not financial.
+ * Financial fields (status, price_at_acceptance, acceptance_source) must not
+ * change after invoicing. Contact fields (name, email) are not blocked.
  */
 function assertNotInvoiced(lead: LeadRecord): void {
   if (lead.invoice_id !== null) {
@@ -36,6 +36,32 @@ function assertNotInvoiced(lead: LeadRecord): void {
   }
 }
 
+/**
+ * Throws if a lower-authority source is trying to override a higher-authority one.
+ *
+ * Authority order (highest to lowest): convertr = hubspot > manual
+ * Rules:
+ *   - External sources (convertr, hubspot) cannot override each other
+ *   - manual cannot override any external source
+ *   - Any source can write if acceptance_source is currently null
+ */
+function assertSourceAllowed(lead: LeadRecord, incomingSource: AcceptanceSource): void {
+  const existing = lead.acceptance_source
+  if (!existing) return                         // no prior source — always allowed
+  if (existing === incomingSource) return       // same source retrying — idempotency handles it
+  if (incomingSource === 'manual') {
+    throw new LeadLifecycleError(
+      `Cannot manually update lead "${lead.id}": already owned by external source "${existing}". ` +
+      `Only "${existing}" can update this lead.`
+    )
+  }
+  // Different external sources colliding (e.g. convertr → hubspot)
+  throw new LeadLifecycleError(
+    `Cannot update lead "${lead.id}" via "${incomingSource}": ` +
+    `already owned by "${existing}". Source conflict must be resolved manually.`
+  )
+}
+
 // ─── Service Functions ────────────────────────────────────────────────────────
 
 /**
@@ -43,7 +69,7 @@ function assertNotInvoiced(lead: LeadRecord): void {
  * Rules:
  *   - Lead must exist
  *   - Lead must not be invoiced (financial lock)
- *   - Status must be 'pending' (cannot deliver twice)
+ *   - Status must be 'pending' (idempotent if already delivered)
  */
 export function deliverLead(provider: DataProvider, id: string): LeadRecord {
   const lead = provider.getLead(id)
@@ -64,64 +90,67 @@ export function deliverLead(provider: DataProvider, id: string): LeadRecord {
 }
 
 /**
- * Mark a delivered lead as accepted.
+ * Central acceptance/rejection function. All accept and reject actions — whether
+ * from manual UI, Convertr webhook, or HubSpot — route through here.
+ *
  * Rules:
  *   - Lead must exist
  *   - Lead must not be invoiced (financial lock)
- *   - Status must be 'delivered' (delivered_at must be set)
- *   - Cannot accept a lead that is already accepted or rejected
- *   - Snapshots campaign.unit_price into price_at_acceptance at acceptance time
- *     so revenue is never affected by future campaign price changes.
- *     Fallback: if campaign is missing, price_at_acceptance is set to null.
+ *   - Lead must be 'delivered' with delivered_at set
+ *   - Source-of-truth: if lead already has an external source, only that source
+ *     may update it; manual is never allowed to override an external source
+ *   - Idempotent: repeat call with same status + same source returns existing state
+ *   - On accept: snapshots campaign.unit_price into price_at_acceptance
  */
-export function acceptLead(provider: DataProvider, id: string): LeadRecord {
+export function updateLeadAcceptance(
+  provider: DataProvider,
+  id: string,
+  status: 'accepted' | 'rejected',
+  source: AcceptanceSource
+): LeadRecord {
   const lead = provider.getLead(id)
   if (!lead) throw new LeadNotFoundError(id)
 
-  if (lead.status === 'accepted') return lead   // idempotent
+  // Idempotent: same status + same source → no-op
+  if (lead.status === status && lead.acceptance_source === source) return lead
 
   assertNotInvoiced(lead)
+  assertSourceAllowed(lead, source)
 
   if (lead.status !== 'delivered' || !lead.delivered_at) {
     throw new LeadLifecycleError(
-      `Cannot accept lead "${id}": must be delivered first (current status: "${lead.status}")`
+      `Cannot ${status} lead "${id}": must be delivered first (current status: "${lead.status}")`
     )
   }
 
-  const campaign            = provider.getCampaign(lead.campaign_id)
-  const price_at_acceptance = campaign?.unit_price ?? null
-
-  const updated = provider.updateLeadStatus(id, 'accepted', {
-    accepted_at: today(),
-    price_at_acceptance,
-  })
-  return updated!
+  if (status === 'accepted') {
+    const campaign            = provider.getCampaign(lead.campaign_id)
+    const price_at_acceptance = campaign?.unit_price ?? null
+    return provider.updateLeadStatus(id, 'accepted', {
+      accepted_at: today(),
+      acceptance_source: source,
+      price_at_acceptance,
+    })!
+  } else {
+    return provider.updateLeadStatus(id, 'rejected', {
+      rejected_at: today(),
+      acceptance_source: source,
+    })!
+  }
 }
 
 /**
- * Mark a delivered lead as rejected.
- * Rules:
- *   - Lead must exist
- *   - Lead must not be invoiced (financial lock)
- *   - Status must be 'delivered' (delivered_at must be set)
- *   - Cannot reject a lead that is already rejected or accepted
+ * Accept a lead manually (convenience wrapper around updateLeadAcceptance).
+ */
+export function acceptLead(provider: DataProvider, id: string): LeadRecord {
+  return updateLeadAcceptance(provider, id, 'accepted', 'manual')
+}
+
+/**
+ * Reject a lead manually (convenience wrapper around updateLeadAcceptance).
  */
 export function rejectLead(provider: DataProvider, id: string): LeadRecord {
-  const lead = provider.getLead(id)
-  if (!lead) throw new LeadNotFoundError(id)
-
-  if (lead.status === 'rejected') return lead   // idempotent
-
-  assertNotInvoiced(lead)
-
-  if (lead.status !== 'delivered' || !lead.delivered_at) {
-    throw new LeadLifecycleError(
-      `Cannot reject lead "${id}": must be delivered first (current status: "${lead.status}")`
-    )
-  }
-
-  const updated = provider.updateLeadStatus(id, 'rejected', {})
-  return updated!
+  return updateLeadAcceptance(provider, id, 'rejected', 'manual')
 }
 
 /**

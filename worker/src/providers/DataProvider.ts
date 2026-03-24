@@ -15,6 +15,7 @@ import type {
   BillingPayment,
   LeadStatus,
   InvoiceStatus,
+  AcceptanceSource,
 } from './types'
 
 export interface DataProvider {
@@ -29,10 +30,15 @@ export interface DataProvider {
   // ─── Leads ───────────────────────────────────────────────────────────────
   listLeads(filters?: { campaign_id?: string; status?: LeadStatus }): LeadRecord[]
   getLead(id: string): LeadRecord | null
+  // Looks up a lead by its external_id (set by CRM/Convertr at create time).
+  // Returns null if no match — callers must handle gracefully (do not throw).
+  getLeadByExternalId(externalId: string): LeadRecord | null
   createLead(data: Omit<LeadRecord, 'id' | 'created_at'>): LeadRecord
   updateLeadStatus(id: string, status: LeadStatus, timestamps?: {
     delivered_at?:        string
     accepted_at?:         string
+    rejected_at?:         string
+    acceptance_source?:   AcceptanceSource | null
     price_at_acceptance?: number | null
   }): LeadRecord | null
   setLeadInvoice(id: string, invoiceId: string): LeadRecord | null
