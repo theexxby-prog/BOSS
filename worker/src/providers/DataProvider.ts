@@ -10,6 +10,7 @@ export class InvoiceLockError extends Error {
 import type {
   BillingClient,
   BillingCampaign,
+  ClientBilling,
   LeadRecord,
   InvoiceRecord,
   BillingPayment,
@@ -24,6 +25,11 @@ export interface DataProvider {
   getClient(id: string): BillingClient | null
   createClient(data: Omit<BillingClient, 'id' | 'created_at'>): BillingClient
   updateClient(id: string, patch: Partial<Omit<BillingClient, 'id' | 'created_at'>>): BillingClient | null
+
+  // ─── Client Billing Config ───────────────────────────────────────────────
+  // One billing config per client. updateBilling acts as upsert.
+  getBillingByClient(clientId: string): ClientBilling | null
+  updateBilling(clientId: string, data: Omit<ClientBilling, 'client_id'>): ClientBilling
 
   // ─── Campaigns ───────────────────────────────────────────────────────────
   listCampaigns(clientId?: string): BillingCampaign[]

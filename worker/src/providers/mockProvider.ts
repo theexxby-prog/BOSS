@@ -7,6 +7,7 @@ import { InvoiceLockError } from './DataProvider'
 import type {
   BillingClient,
   BillingCampaign,
+  ClientBilling,
   LeadRecord,
   InvoiceRecord,
   InvoiceLineItem,
@@ -66,6 +67,40 @@ const campaigns: BillingCampaign[] = [
     name: 'Enterprise SaaS Decision Makers',
     status: 'active', billing_type: 'per_lead', unit_price: 200,
     created_at: '2026-01-25',
+  },
+]
+
+// One billing config per client. billing_entity_name is the legal name used on invoices.
+const billingConfigs: ClientBilling[] = [
+  {
+    client_id:            'c1',
+    billing_entity_name:  'Apex Ventures LLC',
+    billing_email:        'billing@apexventures.com',
+    billing_address:      '590 Madison Avenue, 21st Floor, New York, NY 10022, USA',
+    tax_id:               'US-83-4421901',
+    currency:             'USD',
+    payment_terms_days:   30,
+    billing_type_default: 'per_lead',
+  },
+  {
+    client_id:            'c2',
+    billing_entity_name:  'NovaTech Solutions Inc.',
+    billing_email:        'accounts@novatech.io',
+    billing_address:      '535 Mission Street, Suite 1800, San Francisco, CA 94105, USA',
+    tax_id:               'US-47-8823014',
+    currency:             'USD',
+    payment_terms_days:   14,
+    billing_type_default: 'per_lead',
+  },
+  {
+    client_id:            'c3',
+    billing_entity_name:  'Meridian Growth Partners Ltd',
+    billing_email:        'finance@meridiangrowth.com',
+    billing_address:      '1 Canada Square, Canary Wharf, London E14 5AB, UK',
+    tax_id:               'GB-302-8841-23',
+    currency:             'GBP',
+    payment_terms_days:   60,
+    billing_type_default: 'retainer',
   },
 ]
 
@@ -157,6 +192,7 @@ const invoices: InvoiceRecord[] = [
   {
     id: 'inv1', invoice_number: 'INV-001',
     client_id: 'c1', campaign_id: 'camp1',
+    billing_entity_name: 'Apex Ventures LLC',
     billing_type: 'per_lead', unit_count: 14, unit_price: 150,
     total: 2100, line_items: inv1LineItems,
     status: 'paid', created_at: '2026-02-10', sent_at: '2026-02-12',
@@ -164,6 +200,7 @@ const invoices: InvoiceRecord[] = [
   {
     id: 'inv2', invoice_number: 'INV-002',
     client_id: 'c2', campaign_id: 'camp2',
+    billing_entity_name: 'NovaTech Solutions Inc.',
     billing_type: 'per_lead', unit_count: 16, unit_price: 200,
     total: 3200, line_items: inv2LineItems,
     status: 'partial', created_at: '2026-03-05', sent_at: '2026-03-07',
@@ -214,6 +251,25 @@ export const mockProvider: DataProvider = {
     if (!client) return null
     Object.assign(client, patch)
     return client
+  },
+
+  // ── Client Billing Config ──────────────────────────────────────────────────
+
+  getBillingByClient(clientId) {
+    return billingConfigs.find(b => b.client_id === clientId) ?? null
+  },
+
+  updateBilling(clientId, data) {
+    const existing = billingConfigs.find(b => b.client_id === clientId)
+    if (existing) {
+      // Update in place
+      Object.assign(existing, data)
+      return existing
+    }
+    // Create if not exists (upsert)
+    const config: ClientBilling = { client_id: clientId, ...data }
+    billingConfigs.push(config)
+    return config
   },
 
   // ── Campaigns ─────────────────────────────────────────────────────────────
@@ -298,6 +354,7 @@ export const mockProvider: DataProvider = {
       const financialFields: (keyof typeof patch)[] = [
         'total', 'unit_count', 'unit_price', 'line_items',
         'billing_type', 'client_id', 'campaign_id', 'invoice_number',
+        'billing_entity_name',
       ]
       const illegalFields = financialFields.filter(f => f in patch)
       if (illegalFields.length > 0) {

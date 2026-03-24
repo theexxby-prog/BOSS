@@ -28,6 +28,19 @@ export interface BillingClient {
   created_at:      string
 }
 
+// Financial identity for a client — used on invoices and for payment processing.
+// One record per client. Separate from BillingClient identity (name, domain, etc.)
+export interface ClientBilling {
+  client_id:             string
+  billing_entity_name:   string   // legal name that appears on invoices, e.g. "Apex Ventures LLC"
+  billing_email:         string   // where invoices are sent
+  billing_address:       string   // full address as a single string for simplicity
+  tax_id:                string | null  // VAT / EIN / GST number; null if not applicable
+  currency:              string   // ISO 4217, e.g. "USD", "GBP", "EUR"
+  payment_terms_days:    number   // e.g. 30 = net-30
+  billing_type_default:  'per_lead' | 'retainer'  // default for new campaigns under this client
+}
+
 export interface BillingCampaign {
   id:           string
   client_id:    string
@@ -63,18 +76,19 @@ export interface InvoiceLineItem {
 }
 
 export interface InvoiceRecord {
-  id:             string
-  invoice_number: string        // human-readable, e.g. "INV-001"
-  client_id:      string
-  campaign_id:    string
-  billing_type:   BillingType
-  unit_count:     number | null // null for retainer
-  unit_price:     number | null // null for retainer
-  total:          number        // must equal sum(line_items[].price)
-  line_items:     InvoiceLineItem[]  // populated at generation; invoice does not depend on leads after this
-  status:         InvoiceStatus
-  created_at:     string
-  sent_at:        string | null
+  id:                   string
+  invoice_number:       string        // human-readable, e.g. "INV-001"
+  client_id:            string
+  campaign_id:          string
+  billing_entity_name:  string        // snapshot from ClientBilling at generation time — invoice is self-contained
+  billing_type:         BillingType
+  unit_count:           number | null // null for retainer
+  unit_price:           number | null // null for retainer
+  total:                number        // must equal sum(line_items[].price)
+  line_items:           InvoiceLineItem[]  // populated at generation; invoice does not depend on leads after this
+  status:               InvoiceStatus
+  created_at:           string
+  sent_at:              string | null
 }
 
 export interface BillingPayment {

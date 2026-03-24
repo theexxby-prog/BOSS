@@ -32,15 +32,26 @@ export function getUninvoicedLeads(provider: DataProvider, campaignId: string): 
  * Generate a draft invoice for a campaign from its uninvoiced accepted leads.
  * Rules:
  *   - Campaign must exist
+ *   - Client billing config must exist (billing_entity_name is required on invoices)
  *   - At least one uninvoiced accepted lead must exist
  *   - Each lead contributes its price_at_acceptance to the invoice (fallback: campaign.unit_price)
  *   - total is validated as sum(line_items[].price) — invoice is self-contained after creation
+ *   - billing_entity_name is snapshotted from ClientBilling at generation time
  *   - Creates invoice with status = 'draft'
  *   - Sets invoice_id on each included lead (marks them as invoiced)
  */
 export function generateInvoice(provider: DataProvider, campaignId: string): InvoiceRecord {
   const campaign = provider.getCampaign(campaignId)
   if (!campaign) throw new InvoiceError(`Campaign not found: ${campaignId}`)
+
+  // Billing config is required — invoice must carry the legal entity name
+  const billingConfig = provider.getBillingByClient(campaign.client_id)
+  if (!billingConfig) {
+    throw new InvoiceError(
+      `Cannot generate invoice: no billing config found for client "${campaign.client_id}". ` +
+      `Set up billing details before invoicing.`
+    )
+  }
 
   const uninvoiced = getUninvoicedLeads(provider, campaignId)
   if (uninvoiced.length === 0) {
@@ -69,16 +80,17 @@ export function generateInvoice(provider: DataProvider, campaignId: string): Inv
   }
 
   const invoice = provider.createInvoice({
-    invoice_number: provider.nextInvoiceNumber(),
-    client_id:      campaign.client_id,
-    campaign_id:    campaignId,
-    billing_type:   'per_lead',
+    invoice_number:      provider.nextInvoiceNumber(),
+    client_id:           campaign.client_id,
+    campaign_id:         campaignId,
+    billing_entity_name: billingConfig.billing_entity_name,  // snapshotted — self-contained after creation
+    billing_type:        'per_lead',
     unit_count,
     unit_price,
     total,
     line_items,
-    status:         'draft',
-    sent_at:        null,
+    status:              'draft',
+    sent_at:             null,
   })
 
   // Mark each lead as invoiced — defensive check ensures we never overwrite an existing link
