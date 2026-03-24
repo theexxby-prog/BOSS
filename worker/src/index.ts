@@ -17,6 +17,7 @@ import { documentsRouter }  from './routes/documents';
 import { settingsRouter }   from './routes/settings';
 import { jobCardsRouter }      from './routes/job-cards';
 import { landingPageRenderer } from './routes/landing-page';
+import { billingRouter }       from './routes/billing';
 import { dbFirst, dbAll }      from './db';
 
 export default {
@@ -78,6 +79,7 @@ export default {
     if (path.startsWith('/api/documents'))   return documentsRouter(request, env);
     if (path.startsWith('/api/settings'))    return settingsRouter(request, env);
     if (path.startsWith('/api/job-cards'))   return jobCardsRouter(request, env);
+    if (path.startsWith('/api/billing'))     return billingRouter(request, origin);
 
     return jsonResponse({ error: 'Not found' }, 404, origin);
   },
