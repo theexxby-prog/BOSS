@@ -14,9 +14,9 @@ export interface CampaignMetrics {
   accepted:             number
   rejected:             number
   pending:              number
-  acceptance_rate:      number | null  // null if delivered = 0
+  acceptance_rate:      number | null  // accepted / (accepted + rejected); null if none reviewed yet
   unit_price:           number
-  earned_revenue:       number         // accepted * unit_price (invoiced or not)
+  earned_revenue:       number         // sum(price_at_acceptance) for accepted leads (fallback: unit_price)
   invoiced_revenue:     number         // sum of invoice totals
   collected_revenue:    number         // sum of payments
   outstanding_revenue:  number         // invoiced - collected
@@ -29,7 +29,7 @@ export interface GlobalMetrics {
   total_leads:             number
   total_delivered:         number
   total_accepted:          number
-  overall_acceptance_rate: number | null
+  overall_acceptance_rate: number | null // accepted / (accepted + rejected) across all campaigns
 }
 
 export interface UninvoicedRevenue {
@@ -51,15 +51,25 @@ export function getCampaignMetrics(
   const campaign = provider.getCampaign(campaignId)
   if (!campaign) return null
 
-  const leads    = provider.listLeads({ campaign_id: campaignId })
+  const leads     = provider.listLeads({ campaign_id: campaignId })
   const delivered = leads.filter(l => l.status === 'delivered').length
   const accepted  = leads.filter(l => l.status === 'accepted').length
   const rejected  = leads.filter(l => l.status === 'rejected').length
   const pending   = leads.filter(l => l.status === 'pending').length
 
-  const acceptance_rate = delivered > 0
-    ? Math.round((accepted / delivered) * 1000) / 10  // e.g. 70.0
+  // Acceptance rate = accepted / (accepted + rejected)
+  // Excludes pending and delivered (unreviewed) — measures quality of reviewed leads only.
+  const reviewed        = accepted + rejected
+  const acceptance_rate = reviewed > 0
+    ? Math.round((accepted / reviewed) * 1000) / 10   // e.g. 70.0
     : null
+
+  // Earned revenue uses price_at_acceptance snapshot per lead.
+  // Fallback to campaign.unit_price for any legacy leads missing the snapshot.
+  const acceptedLeads   = leads.filter(l => l.status === 'accepted')
+  const earned_revenue  = acceptedLeads.reduce(
+    (sum, l) => sum + (l.price_at_acceptance ?? campaign.unit_price), 0
+  )
 
   const invoices          = provider.listInvoices({ campaign_id: campaignId })
   const invoiced_revenue  = invoices.reduce((sum, inv) => sum + inv.total, 0)
@@ -77,7 +87,7 @@ export function getCampaignMetrics(
     pending,
     acceptance_rate,
     unit_price:          campaign.unit_price,
-    earned_revenue:      accepted * campaign.unit_price,
+    earned_revenue,
     invoiced_revenue,
     collected_revenue,
     outstanding_revenue: invoiced_revenue - collected_revenue,
@@ -108,9 +118,12 @@ export function getGlobalMetrics(provider: DataProvider): GlobalMetrics {
   const total_leads     = allLeads.length
   const total_delivered = allLeads.filter(l => l.status === 'delivered').length
   const total_accepted  = allLeads.filter(l => l.status === 'accepted').length
+  const total_rejected  = allLeads.filter(l => l.status === 'rejected').length
 
-  const overall_acceptance_rate = total_delivered > 0
-    ? Math.round((total_accepted / total_delivered) * 1000) / 10
+  // Acceptance rate = accepted / (accepted + rejected) — same formula as per-campaign
+  const total_reviewed          = total_accepted + total_rejected
+  const overall_acceptance_rate = total_reviewed > 0
+    ? Math.round((total_accepted / total_reviewed) * 1000) / 10
     : null
 
   const total_revenue   = allInvoices.reduce((sum, inv) => sum + inv.total, 0)

@@ -2,6 +2,11 @@
 // Both MockDataProvider and RealDataProvider must implement this.
 // Service layer depends only on this interface — never on a concrete provider.
 
+// Thrown by any provider when a financial field update is attempted on a non-draft invoice.
+export class InvoiceLockError extends Error {
+  constructor(message: string) { super(message) }
+}
+
 import type {
   BillingClient,
   BillingCampaign,
@@ -26,8 +31,9 @@ export interface DataProvider {
   getLead(id: string): LeadRecord | null
   createLead(data: Omit<LeadRecord, 'id' | 'created_at'>): LeadRecord
   updateLeadStatus(id: string, status: LeadStatus, timestamps?: {
-    delivered_at?: string
-    accepted_at?: string
+    delivered_at?:        string
+    accepted_at?:         string
+    price_at_acceptance?: number | null
   }): LeadRecord | null
   setLeadInvoice(id: string, invoiceId: string): LeadRecord | null
 

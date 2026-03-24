@@ -4,6 +4,7 @@
 
 import { jsonResponse } from '../cors'
 import { mockProvider }  from '../providers/mockProvider'
+import { InvoiceLockError } from '../providers/DataProvider'
 
 import { getCampaignMetrics, getGlobalMetrics } from '../services/reportService'
 import { generateInvoice, sendInvoice }         from '../services/invoiceService'
@@ -71,6 +72,9 @@ export async function billingRouter(
   } catch (err) {
     if (err instanceof InvoiceError || err instanceof PaymentError) {
       return jsonResponse({ success: false, error: err.message }, 422, origin)
+    }
+    if (err instanceof InvoiceLockError) {
+      return jsonResponse({ success: false, error: err.message }, 409, origin)
     }
     return jsonResponse({ success: false, error: String(err) }, 500, origin)
   }

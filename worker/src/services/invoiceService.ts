@@ -2,7 +2,7 @@
 // Handles invoice generation and locking. No payment logic here.
 
 import type { DataProvider } from '../providers/DataProvider'
-import type { InvoiceRecord, LeadRecord } from '../providers/types'
+import type { InvoiceRecord, InvoiceLineItem, LeadRecord } from '../providers/types'
 
 // ─── Error Types ─────────────────────────────────────────────────────────────
 
@@ -33,6 +33,8 @@ export function getUninvoicedLeads(provider: DataProvider, campaignId: string): 
  * Rules:
  *   - Campaign must exist
  *   - At least one uninvoiced accepted lead must exist
+ *   - Each lead contributes its price_at_acceptance to the invoice (fallback: campaign.unit_price)
+ *   - total is validated as sum(line_items[].price) — invoice is self-contained after creation
  *   - Creates invoice with status = 'draft'
  *   - Sets invoice_id on each included lead (marks them as invoiced)
  */
@@ -47,9 +49,24 @@ export function generateInvoice(provider: DataProvider, campaignId: string): Inv
     )
   }
 
-  const unit_count = uninvoiced.length
-  const unit_price = campaign.unit_price
-  const total      = unit_count * unit_price
+  // Build line items from each lead's snapshotted price.
+  // Fallback to campaign.unit_price if price_at_acceptance is null (legacy leads).
+  const line_items: InvoiceLineItem[] = uninvoiced.map(lead => ({
+    lead_id: lead.id,
+    price:   lead.price_at_acceptance ?? campaign.unit_price,
+  }))
+
+  const unit_count = line_items.length
+  const unit_price = campaign.unit_price   // reference price on the invoice header
+  const total      = line_items.reduce((sum, item) => sum + item.price, 0)
+
+  // Validate: total must equal sum of line items (defensive — should always pass)
+  const expectedTotal = line_items.reduce((sum, item) => sum + item.price, 0)
+  if (total !== expectedTotal) {
+    throw new InvoiceError(
+      `Invoice total mismatch for campaign "${campaignId}": expected ${expectedTotal}, got ${total}`
+    )
+  }
 
   const invoice = provider.createInvoice({
     invoice_number: provider.nextInvoiceNumber(),
@@ -59,6 +76,7 @@ export function generateInvoice(provider: DataProvider, campaignId: string): Inv
     unit_count,
     unit_price,
     total,
+    line_items,
     status:         'draft',
     sent_at:        null,
   })

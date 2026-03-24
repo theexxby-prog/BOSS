@@ -25,7 +25,11 @@ function today(): string {
  *   - Invoice must exist
  *   - Invoice must be in 'sent', 'partial', or 'paid' status (not 'draft')
  *   - Amount must be positive
- *   - Overpayment is allowed (outstanding balance goes negative)
+ *   - Overpayment is allowed (outstanding balance goes negative — status still set to 'paid')
+ * After recording:
+ *   - Recalculates outstanding balance
+ *   - Updates invoice status: outstanding > 0 → 'partial', outstanding <= 0 → 'paid'
+ *   - This is idempotent: replaying the same payment sequence yields the same status
  */
 export function recordPayment(
   provider: DataProvider,
@@ -45,11 +49,23 @@ export function recordPayment(
     throw new PaymentError(`Payment amount must be positive (got ${amount})`)
   }
 
-  return provider.createPayment({
+  const payment = provider.createPayment({
     invoice_id: invoiceId,
     amount,
     paid_at: today(),
   })
+
+  // Derive new invoice status from total payments after this one
+  const totalPaid   = provider.listPayments(invoiceId).reduce((sum, p) => sum + p.amount, 0)
+  const outstanding = invoice.total - totalPaid
+  const newStatus   = outstanding <= 0 ? 'paid' : 'partial'
+
+  // Only update if status actually needs to change (avoids unnecessary writes)
+  if (invoice.status !== newStatus) {
+    provider.updateInvoice(invoiceId, { status: newStatus })
+  }
+
+  return payment
 }
 
 /**

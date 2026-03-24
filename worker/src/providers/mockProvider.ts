@@ -3,11 +3,13 @@
 // No DB, no async, no external calls.
 
 import type { DataProvider } from './DataProvider'
+import { InvoiceLockError } from './DataProvider'
 import type {
   BillingClient,
   BillingCampaign,
   LeadRecord,
   InvoiceRecord,
+  InvoiceLineItem,
   BillingPayment,
 } from './types'
 
@@ -36,82 +38,98 @@ const campaigns: BillingCampaign[] = [
 // Camp 1 — 30 leads: 14 accepted, 6 rejected, 10 pending, 0 in 'delivered' limbo
 // Camp 2 — 25 leads: 16 accepted, 4 rejected, 3 pending, 2 delivered (awaiting review)
 const leads: LeadRecord[] = [
-  // ── Camp 1 — Accepted (14) ─────────────────────────────────────────────
-  { id: 'l1-01', campaign_id: 'camp1', name: 'James Whitfield',   email: 'j.whitfield@apexvc.com',     status: 'accepted', delivered_at: '2026-02-01', accepted_at: '2026-02-03', invoice_id: 'inv1', created_at: '2026-01-28' },
-  { id: 'l1-02', campaign_id: 'camp1', name: 'Sarah Okafor',      email: 's.okafor@capitalx.io',       status: 'accepted', delivered_at: '2026-02-01', accepted_at: '2026-02-03', invoice_id: 'inv1', created_at: '2026-01-28' },
-  { id: 'l1-03', campaign_id: 'camp1', name: 'Marcus Chen',       email: 'm.chen@peakequity.com',      status: 'accepted', delivered_at: '2026-02-02', accepted_at: '2026-02-04', invoice_id: 'inv1', created_at: '2026-01-29' },
-  { id: 'l1-04', campaign_id: 'camp1', name: 'Priya Sharma',      email: 'p.sharma@nexusgrowth.com',   status: 'accepted', delivered_at: '2026-02-02', accepted_at: '2026-02-04', invoice_id: 'inv1', created_at: '2026-01-29' },
-  { id: 'l1-05', campaign_id: 'camp1', name: 'Tom Brauer',        email: 't.brauer@stonebridge.vc',    status: 'accepted', delivered_at: '2026-02-03', accepted_at: '2026-02-05', invoice_id: 'inv1', created_at: '2026-01-30' },
-  { id: 'l1-06', campaign_id: 'camp1', name: 'Elena Moser',       email: 'e.moser@clearview.vc',       status: 'accepted', delivered_at: '2026-02-03', accepted_at: '2026-02-05', invoice_id: 'inv1', created_at: '2026-01-30' },
-  { id: 'l1-07', campaign_id: 'camp1', name: 'Daniel Park',       email: 'd.park@northshoreinv.com',   status: 'accepted', delivered_at: '2026-02-04', accepted_at: '2026-02-06', invoice_id: 'inv1', created_at: '2026-01-31' },
-  { id: 'l1-08', campaign_id: 'camp1', name: 'Lisa Tanaka',       email: 'l.tanaka@redcedarvc.com',    status: 'accepted', delivered_at: '2026-02-04', accepted_at: '2026-02-06', invoice_id: 'inv1', created_at: '2026-01-31' },
-  { id: 'l1-09', campaign_id: 'camp1', name: 'Ahmed Hassan',      email: 'a.hassan@crescentcap.com',   status: 'accepted', delivered_at: '2026-02-05', accepted_at: '2026-02-07', invoice_id: 'inv1', created_at: '2026-02-01' },
-  { id: 'l1-10', campaign_id: 'camp1', name: 'Nina Vogt',         email: 'n.vogt@alpinegrowth.com',    status: 'accepted', delivered_at: '2026-02-05', accepted_at: '2026-02-07', invoice_id: 'inv1', created_at: '2026-02-01' },
-  { id: 'l1-11', campaign_id: 'camp1', name: 'Carlos Rivera',     email: 'c.rivera@meridian.vc',       status: 'accepted', delivered_at: '2026-02-06', accepted_at: '2026-02-08', invoice_id: 'inv1', created_at: '2026-02-02' },
-  { id: 'l1-12', campaign_id: 'camp1', name: 'Olivia Banks',      email: 'o.banks@frontierpartners.io',status: 'accepted', delivered_at: '2026-02-06', accepted_at: '2026-02-08', invoice_id: 'inv1', created_at: '2026-02-02' },
-  { id: 'l1-13', campaign_id: 'camp1', name: 'Ryan Hollis',       email: 'r.hollis@goldengatecap.com', status: 'accepted', delivered_at: '2026-02-07', accepted_at: '2026-02-09', invoice_id: 'inv1', created_at: '2026-02-03' },
-  { id: 'l1-14', campaign_id: 'camp1', name: 'Maya Patel',        email: 'm.patel@summitvc.com',       status: 'accepted', delivered_at: '2026-02-07', accepted_at: '2026-02-09', invoice_id: 'inv1', created_at: '2026-02-03' },
+  // ── Camp 1 — Accepted (14) — price_at_acceptance = 150 ───────────────────
+  { id: 'l1-01', campaign_id: 'camp1', name: 'James Whitfield',   email: 'j.whitfield@apexvc.com',     status: 'accepted', delivered_at: '2026-02-01', accepted_at: '2026-02-03', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-28' },
+  { id: 'l1-02', campaign_id: 'camp1', name: 'Sarah Okafor',      email: 's.okafor@capitalx.io',       status: 'accepted', delivered_at: '2026-02-01', accepted_at: '2026-02-03', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-28' },
+  { id: 'l1-03', campaign_id: 'camp1', name: 'Marcus Chen',       email: 'm.chen@peakequity.com',      status: 'accepted', delivered_at: '2026-02-02', accepted_at: '2026-02-04', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-29' },
+  { id: 'l1-04', campaign_id: 'camp1', name: 'Priya Sharma',      email: 'p.sharma@nexusgrowth.com',   status: 'accepted', delivered_at: '2026-02-02', accepted_at: '2026-02-04', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-29' },
+  { id: 'l1-05', campaign_id: 'camp1', name: 'Tom Brauer',        email: 't.brauer@stonebridge.vc',    status: 'accepted', delivered_at: '2026-02-03', accepted_at: '2026-02-05', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-30' },
+  { id: 'l1-06', campaign_id: 'camp1', name: 'Elena Moser',       email: 'e.moser@clearview.vc',       status: 'accepted', delivered_at: '2026-02-03', accepted_at: '2026-02-05', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-30' },
+  { id: 'l1-07', campaign_id: 'camp1', name: 'Daniel Park',       email: 'd.park@northshoreinv.com',   status: 'accepted', delivered_at: '2026-02-04', accepted_at: '2026-02-06', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-31' },
+  { id: 'l1-08', campaign_id: 'camp1', name: 'Lisa Tanaka',       email: 'l.tanaka@redcedarvc.com',    status: 'accepted', delivered_at: '2026-02-04', accepted_at: '2026-02-06', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-01-31' },
+  { id: 'l1-09', campaign_id: 'camp1', name: 'Ahmed Hassan',      email: 'a.hassan@crescentcap.com',   status: 'accepted', delivered_at: '2026-02-05', accepted_at: '2026-02-07', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-02-01' },
+  { id: 'l1-10', campaign_id: 'camp1', name: 'Nina Vogt',         email: 'n.vogt@alpinegrowth.com',    status: 'accepted', delivered_at: '2026-02-05', accepted_at: '2026-02-07', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-02-01' },
+  { id: 'l1-11', campaign_id: 'camp1', name: 'Carlos Rivera',     email: 'c.rivera@meridian.vc',       status: 'accepted', delivered_at: '2026-02-06', accepted_at: '2026-02-08', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-02-02' },
+  { id: 'l1-12', campaign_id: 'camp1', name: 'Olivia Banks',      email: 'o.banks@frontierpartners.io',status: 'accepted', delivered_at: '2026-02-06', accepted_at: '2026-02-08', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-02-02' },
+  { id: 'l1-13', campaign_id: 'camp1', name: 'Ryan Hollis',       email: 'r.hollis@goldengatecap.com', status: 'accepted', delivered_at: '2026-02-07', accepted_at: '2026-02-09', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-02-03' },
+  { id: 'l1-14', campaign_id: 'camp1', name: 'Maya Patel',        email: 'm.patel@summitvc.com',       status: 'accepted', delivered_at: '2026-02-07', accepted_at: '2026-02-09', invoice_id: 'inv1', price_at_acceptance: 150, created_at: '2026-02-03' },
   // ── Camp 1 — Rejected (6) ──────────────────────────────────────────────
-  { id: 'l1-15', campaign_id: 'camp1', name: 'Greg Fowler',       email: 'g.fowler@test.com',          status: 'rejected', delivered_at: '2026-02-01', accepted_at: null,         invoice_id: null,   created_at: '2026-01-28' },
-  { id: 'l1-16', campaign_id: 'camp1', name: 'Amy Schultz',       email: 'a.schultz@oldmail.net',      status: 'rejected', delivered_at: '2026-02-02', accepted_at: null,         invoice_id: null,   created_at: '2026-01-29' },
-  { id: 'l1-17', campaign_id: 'camp1', name: 'Ben Porter',        email: 'b.porter@generic.biz',       status: 'rejected', delivered_at: '2026-02-03', accepted_at: null,         invoice_id: null,   created_at: '2026-01-30' },
-  { id: 'l1-18', campaign_id: 'camp1', name: 'Chloe Martin',      email: 'c.martin@freemail.com',      status: 'rejected', delivered_at: '2026-02-04', accepted_at: null,         invoice_id: null,   created_at: '2026-01-31' },
-  { id: 'l1-19', campaign_id: 'camp1', name: 'Dan West',          email: 'd.west@noreply.org',         status: 'rejected', delivered_at: '2026-02-05', accepted_at: null,         invoice_id: null,   created_at: '2026-02-01' },
-  { id: 'l1-20', campaign_id: 'camp1', name: 'Eve Crawford',      email: 'e.crawford@unknown.io',      status: 'rejected', delivered_at: '2026-02-06', accepted_at: null,         invoice_id: null,   created_at: '2026-02-02' },
+  { id: 'l1-15', campaign_id: 'camp1', name: 'Greg Fowler',       email: 'g.fowler@test.com',          status: 'rejected', delivered_at: '2026-02-01', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-01-28' },
+  { id: 'l1-16', campaign_id: 'camp1', name: 'Amy Schultz',       email: 'a.schultz@oldmail.net',      status: 'rejected', delivered_at: '2026-02-02', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-01-29' },
+  { id: 'l1-17', campaign_id: 'camp1', name: 'Ben Porter',        email: 'b.porter@generic.biz',       status: 'rejected', delivered_at: '2026-02-03', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-01-30' },
+  { id: 'l1-18', campaign_id: 'camp1', name: 'Chloe Martin',      email: 'c.martin@freemail.com',      status: 'rejected', delivered_at: '2026-02-04', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-01-31' },
+  { id: 'l1-19', campaign_id: 'camp1', name: 'Dan West',          email: 'd.west@noreply.org',         status: 'rejected', delivered_at: '2026-02-05', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-01' },
+  { id: 'l1-20', campaign_id: 'camp1', name: 'Eve Crawford',      email: 'e.crawford@unknown.io',      status: 'rejected', delivered_at: '2026-02-06', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-02' },
   // ── Camp 1 — Pending (10) ──────────────────────────────────────────────
-  { id: 'l1-21', campaign_id: 'camp1', name: 'Frank Gibson',      email: 'f.gibson@prestige.vc',       status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-08' },
-  { id: 'l1-22', campaign_id: 'camp1', name: 'Grace Lin',         email: 'g.lin@highland.cap',         status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-08' },
-  { id: 'l1-23', campaign_id: 'camp1', name: 'Henry Marsh',       email: 'h.marsh@ironwood.vc',        status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-09' },
-  { id: 'l1-24', campaign_id: 'camp1', name: 'Iris Norton',       email: 'i.norton@blueridgecap.com',  status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-09' },
-  { id: 'l1-25', campaign_id: 'camp1', name: 'Jack Owens',        email: 'j.owens@torchvc.com',        status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-10' },
-  { id: 'l1-26', campaign_id: 'camp1', name: 'Kara Palmer',       email: 'k.palmer@foundry.vc',        status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-10' },
-  { id: 'l1-27', campaign_id: 'camp1', name: 'Leo Quinn',         email: 'l.quinn@harborvcap.com',     status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-11' },
-  { id: 'l1-28', campaign_id: 'camp1', name: 'Mia Roberts',       email: 'm.roberts@dawnequity.com',   status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-11' },
-  { id: 'l1-29', campaign_id: 'camp1', name: 'Noah Scott',        email: 'n.scott@vistacapital.io',    status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-12' },
-  { id: 'l1-30', campaign_id: 'camp1', name: 'Olivia Turner',     email: 'o.turner@keystonevc.com',    status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-02-12' },
+  { id: 'l1-21', campaign_id: 'camp1', name: 'Frank Gibson',      email: 'f.gibson@prestige.vc',       status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-08' },
+  { id: 'l1-22', campaign_id: 'camp1', name: 'Grace Lin',         email: 'g.lin@highland.cap',         status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-08' },
+  { id: 'l1-23', campaign_id: 'camp1', name: 'Henry Marsh',       email: 'h.marsh@ironwood.vc',        status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-09' },
+  { id: 'l1-24', campaign_id: 'camp1', name: 'Iris Norton',       email: 'i.norton@blueridgecap.com',  status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-09' },
+  { id: 'l1-25', campaign_id: 'camp1', name: 'Jack Owens',        email: 'j.owens@torchvc.com',        status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-10' },
+  { id: 'l1-26', campaign_id: 'camp1', name: 'Kara Palmer',       email: 'k.palmer@foundry.vc',        status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-10' },
+  { id: 'l1-27', campaign_id: 'camp1', name: 'Leo Quinn',         email: 'l.quinn@harborvcap.com',     status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-11' },
+  { id: 'l1-28', campaign_id: 'camp1', name: 'Mia Roberts',       email: 'm.roberts@dawnequity.com',   status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-11' },
+  { id: 'l1-29', campaign_id: 'camp1', name: 'Noah Scott',        email: 'n.scott@vistacapital.io',    status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-12' },
+  { id: 'l1-30', campaign_id: 'camp1', name: 'Olivia Turner',     email: 'o.turner@keystonevc.com',    status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-12' },
 
-  // ── Camp 2 — Accepted (16) ─────────────────────────────────────────────
-  { id: 'l2-01', campaign_id: 'camp2', name: 'Paul Adeyemi',      email: 'p.adeyemi@novatech.io',      status: 'accepted', delivered_at: '2026-02-15', accepted_at: '2026-02-17', invoice_id: 'inv2', created_at: '2026-02-12' },
-  { id: 'l2-02', campaign_id: 'camp2', name: 'Quinn Blake',       email: 'q.blake@cloudscale.com',     status: 'accepted', delivered_at: '2026-02-15', accepted_at: '2026-02-17', invoice_id: 'inv2', created_at: '2026-02-12' },
-  { id: 'l2-03', campaign_id: 'camp2', name: 'Rachel Cole',       email: 'r.cole@stackops.io',         status: 'accepted', delivered_at: '2026-02-16', accepted_at: '2026-02-18', invoice_id: 'inv2', created_at: '2026-02-13' },
-  { id: 'l2-04', campaign_id: 'camp2', name: 'Sam Diaz',          email: 's.diaz@buildfast.com',       status: 'accepted', delivered_at: '2026-02-16', accepted_at: '2026-02-18', invoice_id: 'inv2', created_at: '2026-02-13' },
-  { id: 'l2-05', campaign_id: 'camp2', name: 'Tara Evans',        email: 't.evans@launchpad.io',       status: 'accepted', delivered_at: '2026-02-17', accepted_at: '2026-02-19', invoice_id: 'inv2', created_at: '2026-02-14' },
-  { id: 'l2-06', campaign_id: 'camp2', name: 'Umar Farouk',       email: 'u.farouk@datasync.com',      status: 'accepted', delivered_at: '2026-02-17', accepted_at: '2026-02-19', invoice_id: 'inv2', created_at: '2026-02-14' },
-  { id: 'l2-07', campaign_id: 'camp2', name: 'Vera Gomez',        email: 'v.gomez@infracloud.io',      status: 'accepted', delivered_at: '2026-02-18', accepted_at: '2026-02-20', invoice_id: 'inv2', created_at: '2026-02-15' },
-  { id: 'l2-08', campaign_id: 'camp2', name: 'Will Harrison',     email: 'w.harrison@meshwork.com',    status: 'accepted', delivered_at: '2026-02-18', accepted_at: '2026-02-20', invoice_id: 'inv2', created_at: '2026-02-15' },
-  { id: 'l2-09', campaign_id: 'camp2', name: 'Xena Ivanova',      email: 'x.ivanova@nextlayer.io',     status: 'accepted', delivered_at: '2026-02-19', accepted_at: '2026-02-21', invoice_id: 'inv2', created_at: '2026-02-16' },
-  { id: 'l2-10', campaign_id: 'camp2', name: 'Yusuf Jafari',      email: 'y.jafari@devpilot.com',      status: 'accepted', delivered_at: '2026-02-19', accepted_at: '2026-02-21', invoice_id: 'inv2', created_at: '2026-02-16' },
-  { id: 'l2-11', campaign_id: 'camp2', name: 'Zoe Kwan',          email: 'z.kwan@horizonstack.io',     status: 'accepted', delivered_at: '2026-02-20', accepted_at: '2026-02-22', invoice_id: 'inv2', created_at: '2026-02-17' },
-  { id: 'l2-12', campaign_id: 'camp2', name: 'Aaron Lane',        email: 'a.lane@coreplatform.com',    status: 'accepted', delivered_at: '2026-02-20', accepted_at: '2026-02-22', invoice_id: 'inv2', created_at: '2026-02-17' },
-  { id: 'l2-13', campaign_id: 'camp2', name: 'Bella Mora',        email: 'b.mora@cloudhive.io',        status: 'accepted', delivered_at: '2026-02-21', accepted_at: '2026-02-23', invoice_id: 'inv2', created_at: '2026-02-18' },
-  { id: 'l2-14', campaign_id: 'camp2', name: 'Carl Nguyen',       email: 'c.nguyen@gridbase.com',      status: 'accepted', delivered_at: '2026-02-21', accepted_at: '2026-02-23', invoice_id: 'inv2', created_at: '2026-02-18' },
-  { id: 'l2-15', campaign_id: 'camp2', name: 'Diana Osei',        email: 'd.osei@rundeckio.com',       status: 'accepted', delivered_at: '2026-02-22', accepted_at: '2026-02-24', invoice_id: 'inv2', created_at: '2026-02-19' },
-  { id: 'l2-16', campaign_id: 'camp2', name: 'Ethan Price',       email: 'e.price@cloudform.io',       status: 'accepted', delivered_at: '2026-02-22', accepted_at: '2026-02-24', invoice_id: 'inv2', created_at: '2026-02-19' },
+  // ── Camp 2 — Accepted (16) — price_at_acceptance = 200 ───────────────────
+  { id: 'l2-01', campaign_id: 'camp2', name: 'Paul Adeyemi',      email: 'p.adeyemi@novatech.io',      status: 'accepted', delivered_at: '2026-02-15', accepted_at: '2026-02-17', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-12' },
+  { id: 'l2-02', campaign_id: 'camp2', name: 'Quinn Blake',       email: 'q.blake@cloudscale.com',     status: 'accepted', delivered_at: '2026-02-15', accepted_at: '2026-02-17', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-12' },
+  { id: 'l2-03', campaign_id: 'camp2', name: 'Rachel Cole',       email: 'r.cole@stackops.io',         status: 'accepted', delivered_at: '2026-02-16', accepted_at: '2026-02-18', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-13' },
+  { id: 'l2-04', campaign_id: 'camp2', name: 'Sam Diaz',          email: 's.diaz@buildfast.com',       status: 'accepted', delivered_at: '2026-02-16', accepted_at: '2026-02-18', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-13' },
+  { id: 'l2-05', campaign_id: 'camp2', name: 'Tara Evans',        email: 't.evans@launchpad.io',       status: 'accepted', delivered_at: '2026-02-17', accepted_at: '2026-02-19', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-14' },
+  { id: 'l2-06', campaign_id: 'camp2', name: 'Umar Farouk',       email: 'u.farouk@datasync.com',      status: 'accepted', delivered_at: '2026-02-17', accepted_at: '2026-02-19', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-14' },
+  { id: 'l2-07', campaign_id: 'camp2', name: 'Vera Gomez',        email: 'v.gomez@infracloud.io',      status: 'accepted', delivered_at: '2026-02-18', accepted_at: '2026-02-20', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-15' },
+  { id: 'l2-08', campaign_id: 'camp2', name: 'Will Harrison',     email: 'w.harrison@meshwork.com',    status: 'accepted', delivered_at: '2026-02-18', accepted_at: '2026-02-20', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-15' },
+  { id: 'l2-09', campaign_id: 'camp2', name: 'Xena Ivanova',      email: 'x.ivanova@nextlayer.io',     status: 'accepted', delivered_at: '2026-02-19', accepted_at: '2026-02-21', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-16' },
+  { id: 'l2-10', campaign_id: 'camp2', name: 'Yusuf Jafari',      email: 'y.jafari@devpilot.com',      status: 'accepted', delivered_at: '2026-02-19', accepted_at: '2026-02-21', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-16' },
+  { id: 'l2-11', campaign_id: 'camp2', name: 'Zoe Kwan',          email: 'z.kwan@horizonstack.io',     status: 'accepted', delivered_at: '2026-02-20', accepted_at: '2026-02-22', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-17' },
+  { id: 'l2-12', campaign_id: 'camp2', name: 'Aaron Lane',        email: 'a.lane@coreplatform.com',    status: 'accepted', delivered_at: '2026-02-20', accepted_at: '2026-02-22', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-17' },
+  { id: 'l2-13', campaign_id: 'camp2', name: 'Bella Mora',        email: 'b.mora@cloudhive.io',        status: 'accepted', delivered_at: '2026-02-21', accepted_at: '2026-02-23', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-18' },
+  { id: 'l2-14', campaign_id: 'camp2', name: 'Carl Nguyen',       email: 'c.nguyen@gridbase.com',      status: 'accepted', delivered_at: '2026-02-21', accepted_at: '2026-02-23', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-18' },
+  { id: 'l2-15', campaign_id: 'camp2', name: 'Diana Osei',        email: 'd.osei@rundeckio.com',       status: 'accepted', delivered_at: '2026-02-22', accepted_at: '2026-02-24', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-19' },
+  { id: 'l2-16', campaign_id: 'camp2', name: 'Ethan Price',       email: 'e.price@cloudform.io',       status: 'accepted', delivered_at: '2026-02-22', accepted_at: '2026-02-24', invoice_id: 'inv2', price_at_acceptance: 200, created_at: '2026-02-19' },
   // ── Camp 2 — Rejected (4) ──────────────────────────────────────────────
-  { id: 'l2-17', campaign_id: 'camp2', name: 'Faye Quinn',        email: 'f.quinn@disposable.net',     status: 'rejected', delivered_at: '2026-02-15', accepted_at: null,         invoice_id: null,   created_at: '2026-02-12' },
-  { id: 'l2-18', campaign_id: 'camp2', name: 'Gary Reed',         email: 'g.reed@fakeorg.io',          status: 'rejected', delivered_at: '2026-02-16', accepted_at: null,         invoice_id: null,   created_at: '2026-02-13' },
-  { id: 'l2-19', campaign_id: 'camp2', name: 'Hannah Stone',      email: 'h.stone@noreply.com',        status: 'rejected', delivered_at: '2026-02-17', accepted_at: null,         invoice_id: null,   created_at: '2026-02-14' },
-  { id: 'l2-20', campaign_id: 'camp2', name: 'Ivan Torres',       email: 'i.torres@testdomain.biz',    status: 'rejected', delivered_at: '2026-02-18', accepted_at: null,         invoice_id: null,   created_at: '2026-02-15' },
+  { id: 'l2-17', campaign_id: 'camp2', name: 'Faye Quinn',        email: 'f.quinn@disposable.net',     status: 'rejected', delivered_at: '2026-02-15', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-12' },
+  { id: 'l2-18', campaign_id: 'camp2', name: 'Gary Reed',         email: 'g.reed@fakeorg.io',          status: 'rejected', delivered_at: '2026-02-16', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-13' },
+  { id: 'l2-19', campaign_id: 'camp2', name: 'Hannah Stone',      email: 'h.stone@noreply.com',        status: 'rejected', delivered_at: '2026-02-17', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-14' },
+  { id: 'l2-20', campaign_id: 'camp2', name: 'Ivan Torres',       email: 'i.torres@testdomain.biz',    status: 'rejected', delivered_at: '2026-02-18', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-02-15' },
   // ── Camp 2 — Delivered, awaiting review (2) ────────────────────────────
-  { id: 'l2-21', campaign_id: 'camp2', name: 'Julia Upton',       email: 'j.upton@scalehub.io',        status: 'delivered',delivered_at: '2026-03-17', accepted_at: null,         invoice_id: null,   created_at: '2026-03-14' },
-  { id: 'l2-22', campaign_id: 'camp2', name: 'Kevin Vale',        email: 'k.vale@cloudmesh.com',       status: 'delivered',delivered_at: '2026-03-18', accepted_at: null,         invoice_id: null,   created_at: '2026-03-15' },
+  { id: 'l2-21', campaign_id: 'camp2', name: 'Julia Upton',       email: 'j.upton@scalehub.io',        status: 'delivered', delivered_at: '2026-03-17', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-03-14' },
+  { id: 'l2-22', campaign_id: 'camp2', name: 'Kevin Vale',        email: 'k.vale@cloudmesh.com',       status: 'delivered', delivered_at: '2026-03-18', accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-03-15' },
   // ── Camp 2 — Pending (3) ───────────────────────────────────────────────
-  { id: 'l2-23', campaign_id: 'camp2', name: 'Laura Webb',        email: 'l.webb@nexusops.io',         status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-03-20' },
-  { id: 'l2-24', campaign_id: 'camp2', name: 'Mike Xu',           email: 'm.xu@infralogic.com',        status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-03-21' },
-  { id: 'l2-25', campaign_id: 'camp2', name: 'Nadia Yuen',        email: 'n.yuen@corestream.io',       status: 'pending',  delivered_at: null,         accepted_at: null,         invoice_id: null,   created_at: '2026-03-22' },
+  { id: 'l2-23', campaign_id: 'camp2', name: 'Laura Webb',        email: 'l.webb@nexusops.io',         status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-03-20' },
+  { id: 'l2-24', campaign_id: 'camp2', name: 'Mike Xu',           email: 'm.xu@infralogic.com',        status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-03-21' },
+  { id: 'l2-25', campaign_id: 'camp2', name: 'Nadia Yuen',        email: 'n.yuen@corestream.io',       status: 'pending',  delivered_at: null, accepted_at: null, invoice_id: null, price_at_acceptance: null, created_at: '2026-03-22' },
 ]
+
+// Line items are pre-built from the accepted leads above.
+// Each entry captures the lead_id and its price_at_acceptance at the time of invoicing.
+// NOTE: statuses on seeded invoices are manually set to reflect real-world state.
+//       Going forward, invoice status is auto-derived by paymentService after each payment.
+const inv1LineItems: InvoiceLineItem[] = [
+  'l1-01','l1-02','l1-03','l1-04','l1-05','l1-06','l1-07',
+  'l1-08','l1-09','l1-10','l1-11','l1-12','l1-13','l1-14',
+].map(id => ({ lead_id: id, price: 150 }))
+
+const inv2LineItems: InvoiceLineItem[] = [
+  'l2-01','l2-02','l2-03','l2-04','l2-05','l2-06','l2-07','l2-08',
+  'l2-09','l2-10','l2-11','l2-12','l2-13','l2-14','l2-15','l2-16',
+].map(id => ({ lead_id: id, price: 200 }))
 
 const invoices: InvoiceRecord[] = [
   {
     id: 'inv1', invoice_number: 'INV-001',
     client_id: 'c1', campaign_id: 'camp1',
-    billing_type: 'per_lead', unit_count: 14, unit_price: 150, total: 2100,
+    billing_type: 'per_lead', unit_count: 14, unit_price: 150,
+    total: 2100, line_items: inv1LineItems,
     status: 'paid', created_at: '2026-02-10', sent_at: '2026-02-12',
   },
   {
     id: 'inv2', invoice_number: 'INV-002',
     client_id: 'c2', campaign_id: 'camp2',
-    billing_type: 'per_lead', unit_count: 16, unit_price: 200, total: 3200,
+    billing_type: 'per_lead', unit_count: 16, unit_price: 200,
+    total: 3200, line_items: inv2LineItems,
     status: 'partial', created_at: '2026-03-05', sent_at: '2026-03-07',
   },
 ]
@@ -183,8 +201,9 @@ export const mockProvider: DataProvider = {
     const lead = leads.find(l => l.id === id)
     if (!lead) return null
     lead.status = status
-    if (timestamps.delivered_at !== undefined) lead.delivered_at = timestamps.delivered_at
-    if (timestamps.accepted_at  !== undefined) lead.accepted_at  = timestamps.accepted_at
+    if (timestamps.delivered_at       !== undefined) lead.delivered_at       = timestamps.delivered_at
+    if (timestamps.accepted_at        !== undefined) lead.accepted_at        = timestamps.accepted_at
+    if (timestamps.price_at_acceptance !== undefined) lead.price_at_acceptance = timestamps.price_at_acceptance
     return lead
   },
 
@@ -217,6 +236,23 @@ export const mockProvider: DataProvider = {
   updateInvoice(id, patch) {
     const invoice = invoices.find(i => i.id === id)
     if (!invoice) return null
+
+    // Financial fields are immutable once an invoice has been sent.
+    // Only status and sent_at may be updated on non-draft invoices (e.g. by paymentService).
+    if (invoice.status !== 'draft') {
+      const financialFields: (keyof typeof patch)[] = [
+        'total', 'unit_count', 'unit_price', 'line_items',
+        'billing_type', 'client_id', 'campaign_id', 'invoice_number',
+      ]
+      const illegalFields = financialFields.filter(f => f in patch)
+      if (illegalFields.length > 0) {
+        throw new InvoiceLockError(
+          `Invoice "${id}" is locked (status: "${invoice.status}") — ` +
+          `cannot modify financial fields: ${illegalFields.join(', ')}`
+        )
+      }
+    }
+
     Object.assign(invoice, patch)
     return invoice
   },

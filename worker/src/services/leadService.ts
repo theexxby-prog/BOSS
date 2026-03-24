@@ -21,12 +21,28 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+// ─── Invoice Lock Guard ──────────────────────────────────────────────────────
+
+/**
+ * Throws if the lead has already been linked to an invoice.
+ * Financial fields (status, price_at_acceptance) must not change after invoicing.
+ * Contact fields (name, email) are not blocked — they are not financial.
+ */
+function assertNotInvoiced(lead: LeadRecord): void {
+  if (lead.invoice_id !== null) {
+    throw new LeadLifecycleError(
+      `Cannot modify lead "${lead.id}": it has been invoiced (invoice_id: "${lead.invoice_id}")`
+    )
+  }
+}
+
 // ─── Service Functions ────────────────────────────────────────────────────────
 
 /**
  * Mark a lead as delivered.
  * Rules:
  *   - Lead must exist
+ *   - Lead must not be invoiced (financial lock)
  *   - Status must be 'pending' (cannot deliver twice)
  */
 export function deliverLead(provider: DataProvider, id: string): LeadRecord {
@@ -34,6 +50,8 @@ export function deliverLead(provider: DataProvider, id: string): LeadRecord {
   if (!lead) throw new LeadNotFoundError(id)
 
   if (lead.status === 'delivered') return lead  // idempotent
+
+  assertNotInvoiced(lead)
 
   if (lead.status !== 'pending') {
     throw new LeadLifecycleError(
@@ -49,8 +67,12 @@ export function deliverLead(provider: DataProvider, id: string): LeadRecord {
  * Mark a delivered lead as accepted.
  * Rules:
  *   - Lead must exist
+ *   - Lead must not be invoiced (financial lock)
  *   - Status must be 'delivered' (delivered_at must be set)
  *   - Cannot accept a lead that is already accepted or rejected
+ *   - Snapshots campaign.unit_price into price_at_acceptance at acceptance time
+ *     so revenue is never affected by future campaign price changes.
+ *     Fallback: if campaign is missing, price_at_acceptance is set to null.
  */
 export function acceptLead(provider: DataProvider, id: string): LeadRecord {
   const lead = provider.getLead(id)
@@ -58,13 +80,21 @@ export function acceptLead(provider: DataProvider, id: string): LeadRecord {
 
   if (lead.status === 'accepted') return lead   // idempotent
 
+  assertNotInvoiced(lead)
+
   if (lead.status !== 'delivered' || !lead.delivered_at) {
     throw new LeadLifecycleError(
       `Cannot accept lead "${id}": must be delivered first (current status: "${lead.status}")`
     )
   }
 
-  const updated = provider.updateLeadStatus(id, 'accepted', { accepted_at: today() })
+  const campaign            = provider.getCampaign(lead.campaign_id)
+  const price_at_acceptance = campaign?.unit_price ?? null
+
+  const updated = provider.updateLeadStatus(id, 'accepted', {
+    accepted_at: today(),
+    price_at_acceptance,
+  })
   return updated!
 }
 
@@ -72,6 +102,7 @@ export function acceptLead(provider: DataProvider, id: string): LeadRecord {
  * Mark a delivered lead as rejected.
  * Rules:
  *   - Lead must exist
+ *   - Lead must not be invoiced (financial lock)
  *   - Status must be 'delivered' (delivered_at must be set)
  *   - Cannot reject a lead that is already rejected or accepted
  */
@@ -80,6 +111,8 @@ export function rejectLead(provider: DataProvider, id: string): LeadRecord {
   if (!lead) throw new LeadNotFoundError(id)
 
   if (lead.status === 'rejected') return lead   // idempotent
+
+  assertNotInvoiced(lead)
 
   if (lead.status !== 'delivered' || !lead.delivered_at) {
     throw new LeadLifecycleError(
