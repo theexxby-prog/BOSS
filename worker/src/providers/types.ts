@@ -5,12 +5,27 @@ export type LeadStatus       = 'pending' | 'delivered' | 'accepted' | 'rejected'
 export type InvoiceStatus    = 'draft' | 'sent' | 'partial' | 'paid'
 export type BillingType      = 'per_lead' | 'flat_fee' | 'retainer'
 export type AcceptanceSource = 'convertr' | 'hubspot' | 'manual'
+export type ClientStatus     = 'active' | 'paused'
+export type ClientType       = 'direct' | 'agency'
+
+// Primary point of contact at the client — used for comms, not auth.
+export interface ClientContact {
+  name:  string
+  email: string
+  phone: string | null
+}
 
 export interface BillingClient {
-  id:         string
-  name:       string
-  industry:   string
-  created_at: string
+  id:              string
+  name:            string
+  status:          ClientStatus
+  type:            ClientType
+  industry:        string
+  primary_contact: ClientContact
+  domain:          string        // e.g. "apexventures.com" — used for dedup and branding
+  timezone:        string        // IANA timezone, e.g. "America/New_York"
+  account_owner:   string        // internal owner (BOSS team member name)
+  created_at:      string
 }
 
 export interface BillingCampaign {

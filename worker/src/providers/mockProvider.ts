@@ -16,8 +16,42 @@ import type {
 // ─── Seed Data ──────────────────────────────────────────────────────────────
 
 const clients: BillingClient[] = [
-  { id: 'c1', name: 'Apex Ventures',      industry: 'VC / Private Equity', created_at: '2026-01-10' },
-  { id: 'c2', name: 'NovaTech Solutions', industry: 'B2B SaaS',            created_at: '2026-01-15' },
+  {
+    id: 'c1',
+    name:            'Apex Ventures',
+    status:          'active',
+    type:            'direct',
+    industry:        'VC / Private Equity',
+    primary_contact: { name: 'Jonathan Reeves', email: 'j.reeves@apexventures.com', phone: '+1 212 555 0101' },
+    domain:          'apexventures.com',
+    timezone:        'America/New_York',
+    account_owner:   'Vishal Mehta',
+    created_at:      '2026-01-10',
+  },
+  {
+    id: 'c2',
+    name:            'NovaTech Solutions',
+    status:          'active',
+    type:            'direct',
+    industry:        'B2B SaaS',
+    primary_contact: { name: 'Priya Anand', email: 'p.anand@novatech.io', phone: '+1 415 555 0182' },
+    domain:          'novatech.io',
+    timezone:        'America/Los_Angeles',
+    account_owner:   'Vishal Mehta',
+    created_at:      '2026-01-15',
+  },
+  {
+    id: 'c3',
+    name:            'Meridian Growth Partners',
+    status:          'active',
+    type:            'agency',
+    industry:        'B2B Demand Generation',
+    primary_contact: { name: 'Sophie Laurent', email: 's.laurent@meridiangrowth.com', phone: '+44 20 7946 0312' },
+    domain:          'meridiangrowth.com',
+    timezone:        'Europe/London',
+    account_owner:   'Vishal Mehta',
+    created_at:      '2026-02-01',
+  },
 ]
 
 const campaigns: BillingCampaign[] = [
@@ -167,6 +201,19 @@ export const mockProvider: DataProvider = {
 
   getClient(id) {
     return clients.find(c => c.id === id) ?? null
+  },
+
+  createClient(data) {
+    const client: BillingClient = { ...data, id: uid(), created_at: now() }
+    clients.push(client)
+    return client
+  },
+
+  updateClient(id, patch) {
+    const client = clients.find(c => c.id === id)
+    if (!client) return null
+    Object.assign(client, patch)
+    return client
   },
 
   // ── Campaigns ─────────────────────────────────────────────────────────────

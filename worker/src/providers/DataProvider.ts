@@ -22,6 +22,8 @@ export interface DataProvider {
   // ─── Clients ─────────────────────────────────────────────────────────────
   listClients(): BillingClient[]
   getClient(id: string): BillingClient | null
+  createClient(data: Omit<BillingClient, 'id' | 'created_at'>): BillingClient
+  updateClient(id: string, patch: Partial<Omit<BillingClient, 'id' | 'created_at'>>): BillingClient | null
 
   // ─── Campaigns ───────────────────────────────────────────────────────────
   listCampaigns(clientId?: string): BillingCampaign[]
