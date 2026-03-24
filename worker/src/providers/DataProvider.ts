@@ -11,6 +11,7 @@ import type {
   BillingClient,
   BillingCampaign,
   ClientBilling,
+  ClientIntegration,
   LeadRecord,
   InvoiceRecord,
   BillingPayment,
@@ -30,6 +31,17 @@ export interface DataProvider {
   // One billing config per client. updateBilling acts as upsert.
   getBillingByClient(clientId: string): ClientBilling | null
   updateBilling(clientId: string, data: Omit<ClientBilling, 'client_id'>): ClientBilling
+
+  // ─── Client Integration Config ───────────────────────────────────────────
+  // One integration config per client. acceptance_source is immutable after creation.
+  getIntegrationByClient(clientId: string): ClientIntegration | null
+  // Throws if an integration already exists for this client (acceptance_source is immutable).
+  createIntegration(data: ClientIntegration): ClientIntegration
+  // Only delivery_method and config may be updated — acceptance_source is excluded by type.
+  updateIntegrationConfig(
+    clientId: string,
+    patch: Pick<ClientIntegration, 'delivery_method' | 'config'>
+  ): ClientIntegration | null
 
   // ─── Campaigns ───────────────────────────────────────────────────────────
   listCampaigns(clientId?: string): BillingCampaign[]

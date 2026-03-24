@@ -41,14 +41,26 @@ export interface ClientBilling {
   billing_type_default:  'per_lead' | 'retainer'  // default for new campaigns under this client
 }
 
+// How leads are delivered to and accepted for a client.
+// acceptance_source is IMMUTABLE after creation — it becomes the enforcement rule
+// for all leads under this client's campaigns.
+// config holds source-specific credentials (api_key, webhook_url, etc.)
+export interface ClientIntegration {
+  client_id:         string
+  delivery_method:   'convertr' | 'hubspot' | 'webhook' | 'csv'
+  acceptance_source: AcceptanceSource   // immutable — locked at creation
+  config:            Record<string, string>  // source-specific: api_key, webhook_url, etc.
+}
+
 export interface BillingCampaign {
-  id:           string
-  client_id:    string
-  name:         string
-  status:       'active' | 'paused' | 'completed'
-  billing_type: BillingType
-  unit_price:   number      // price per accepted lead (for per_lead)
-  created_at:   string
+  id:                string
+  client_id:         string
+  name:              string
+  status:            'active' | 'paused' | 'completed'
+  billing_type:      BillingType
+  unit_price:        number         // price per accepted lead (for per_lead)
+  acceptance_source: AcceptanceSource  // inherited from ClientIntegration at creation; immutable
+  created_at:        string
 }
 
 export interface LeadRecord {

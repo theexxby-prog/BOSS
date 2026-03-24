@@ -8,6 +8,7 @@ import type {
   BillingClient,
   BillingCampaign,
   ClientBilling,
+  ClientIntegration,
   LeadRecord,
   InvoiceRecord,
   InvoiceLineItem,
@@ -60,12 +61,16 @@ const campaigns: BillingCampaign[] = [
     id: 'camp1', client_id: 'c1',
     name: 'Q1 VC Partner Outreach',
     status: 'active', billing_type: 'per_lead', unit_price: 150,
+    acceptance_source: 'manual',    // inherited from c1 integration
     created_at: '2026-01-20',
   },
   {
     id: 'camp2', client_id: 'c2',
     name: 'Enterprise SaaS Decision Makers',
     status: 'active', billing_type: 'per_lead', unit_price: 200,
+    acceptance_source: 'convertr',  // inherited from c2 integration
+    // NOTE: seeded leads for camp2 show acceptance_source: 'manual' — historical data
+    // created before integration config was set. Going forward all new accepts must be via convertr.
     created_at: '2026-01-25',
   },
 ]
@@ -101,6 +106,31 @@ const billingConfigs: ClientBilling[] = [
     currency:             'GBP',
     payment_terms_days:   60,
     billing_type_default: 'retainer',
+  },
+]
+
+// One integration config per client. acceptance_source is immutable after creation.
+const integrationConfigs: ClientIntegration[] = [
+  {
+    client_id:         'c1',
+    delivery_method:   'csv',
+    acceptance_source: 'manual',
+    config:            { sftp_path: '/clients/apex/inbound', schedule: 'weekly' },
+  },
+  {
+    client_id:         'c2',
+    delivery_method:   'convertr',
+    acceptance_source: 'convertr',
+    config:            {
+      api_key:     'cvtr-novatech-live-key',
+      webhook_url: 'https://boss-api.mehtahouse.cc/api/webhooks/convertr',
+    },
+  },
+  {
+    client_id:         'c3',
+    delivery_method:   'hubspot',
+    acceptance_source: 'hubspot',
+    config:            { portal_id: 'hs-98312', api_key: 'hs-meridian-live-key' },
   },
 ]
 
@@ -269,6 +299,33 @@ export const mockProvider: DataProvider = {
     // Create if not exists (upsert)
     const config: ClientBilling = { client_id: clientId, ...data }
     billingConfigs.push(config)
+    return config
+  },
+
+  // ── Client Integration Config ─────────────────────────────────────────────
+
+  getIntegrationByClient(clientId) {
+    return integrationConfigs.find(i => i.client_id === clientId) ?? null
+  },
+
+  createIntegration(data) {
+    const existing = integrationConfigs.find(i => i.client_id === data.client_id)
+    if (existing) {
+      throw new Error(
+        `Integration config already exists for client "${data.client_id}". ` +
+        `acceptance_source "${existing.acceptance_source}" is immutable.`
+      )
+    }
+    integrationConfigs.push(data)
+    return data
+  },
+
+  updateIntegrationConfig(clientId, patch) {
+    const config = integrationConfigs.find(i => i.client_id === clientId)
+    if (!config) return null
+    // Only delivery_method and config may change — acceptance_source is excluded by the type
+    if (patch.delivery_method !== undefined) config.delivery_method = patch.delivery_method
+    if (patch.config          !== undefined) config.config          = patch.config
     return config
   },
 

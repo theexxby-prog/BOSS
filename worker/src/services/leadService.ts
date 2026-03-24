@@ -93,14 +93,16 @@ export function deliverLead(provider: DataProvider, id: string): LeadRecord {
  * Central acceptance/rejection function. All accept and reject actions — whether
  * from manual UI, Convertr webhook, or HubSpot — route through here.
  *
- * Rules:
- *   - Lead must exist
- *   - Lead must not be invoiced (financial lock)
- *   - Lead must be 'delivered' with delivered_at set
- *   - Source-of-truth: if lead already has an external source, only that source
- *     may update it; manual is never allowed to override an external source
- *   - Idempotent: repeat call with same status + same source returns existing state
- *   - On accept: snapshots campaign.unit_price into price_at_acceptance
+ * Rules (in enforcement order):
+ *   1. Lead must exist
+ *   2. Idempotent: same status + same source → no-op
+ *   3. Lead must not be invoiced (financial lock)
+ *   4. Client-level enforcement: source must match campaign → client integration.acceptance_source
+ *      This is the primary authority. If the client is configured for 'convertr', only
+ *      'convertr' may accept or reject any lead under their campaigns.
+ *   5. Lead-level source guard: prevents different sources colliding on the same lead
+ *   6. Lead must be 'delivered' with delivered_at set
+ *   7. On accept: snapshots campaign.unit_price into price_at_acceptance
  */
 export function updateLeadAcceptance(
   provider: DataProvider,
@@ -115,6 +117,24 @@ export function updateLeadAcceptance(
   if (lead.status === status && lead.acceptance_source === source) return lead
 
   assertNotInvoiced(lead)
+
+  // ── Client-level enforcement ───────────────────────────────────────────────
+  // Fetch campaign → client integration to get the authoritative acceptance_source.
+  // If an integration config exists and the incoming source doesn't match, reject immediately.
+  const campaign    = provider.getCampaign(lead.campaign_id)
+  const integration = campaign
+    ? provider.getIntegrationByClient(campaign.client_id)
+    : null
+
+  if (integration && source !== integration.acceptance_source) {
+    throw new LeadLifecycleError(
+      `Cannot ${status} lead "${id}" via "${source}": ` +
+      `client "${campaign!.client_id}" requires all acceptance via "${integration.acceptance_source}". ` +
+      `Check the client's integration config.`
+    )
+  }
+
+  // ── Lead-level source guard (secondary) ───────────────────────────────────
   assertSourceAllowed(lead, source)
 
   if (lead.status !== 'delivered' || !lead.delivered_at) {
@@ -124,7 +144,6 @@ export function updateLeadAcceptance(
   }
 
   if (status === 'accepted') {
-    const campaign            = provider.getCampaign(lead.campaign_id)
     const price_at_acceptance = campaign?.unit_price ?? null
     return provider.updateLeadStatus(id, 'accepted', {
       accepted_at: today(),
