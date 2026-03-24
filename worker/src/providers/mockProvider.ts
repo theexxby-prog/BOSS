@@ -23,13 +23,13 @@ const clients: BillingClient[] = [
 const campaigns: BillingCampaign[] = [
   {
     id: 'camp1', client_id: 'c1',
-    name: 'Apex Q1 Lead Gen',
+    name: 'Q1 VC Partner Outreach',
     status: 'active', billing_type: 'per_lead', unit_price: 150,
     created_at: '2026-01-20',
   },
   {
     id: 'camp2', client_id: 'c2',
-    name: 'NovaTech Enterprise Outreach',
+    name: 'Enterprise SaaS Decision Makers',
     status: 'active', billing_type: 'per_lead', unit_price: 200,
     created_at: '2026-01-25',
   },

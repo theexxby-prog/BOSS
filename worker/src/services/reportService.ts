@@ -9,6 +9,8 @@ import { getUninvoicedLeads } from './invoiceService'
 export interface CampaignMetrics {
   campaign_id:          string
   campaign_name:        string
+  client_id:            string
+  client_name:          string
   total_leads:          number
   delivered:            number
   accepted:             number
@@ -51,6 +53,7 @@ export function getCampaignMetrics(
   const campaign = provider.getCampaign(campaignId)
   if (!campaign) return null
 
+  const client    = provider.getClient(campaign.client_id)
   const leads     = provider.listLeads({ campaign_id: campaignId })
   const delivered = leads.filter(l => l.status === 'delivered').length
   const accepted  = leads.filter(l => l.status === 'accepted').length
@@ -80,6 +83,8 @@ export function getCampaignMetrics(
   return {
     campaign_id:         campaignId,
     campaign_name:       campaign.name,
+    client_id:           campaign.client_id,
+    client_name:         client?.name ?? 'Unknown',
     total_leads:         leads.length,
     delivered,
     accepted,
