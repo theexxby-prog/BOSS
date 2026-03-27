@@ -169,13 +169,14 @@ function renderRequestCard(c, clientMap) {
 // Campaign Detail View — compact with metrics box
 // ═══════════════════════════════════════════════════════════
 async function renderCampaignDetail(campaignId) {
-  const [cRes, clRes, pRes] = await Promise.all([API.getCampaign(campaignId), API.getClients(), API.getPages()]);
+  const [cRes, clRes, pRes, invRes] = await Promise.all([API.getCampaign(campaignId), API.getClients(), API.getPages(), API.getInvoicePreview(campaignId)]);
   if (!cRes.success) return `<div class="card" style="padding:40px;text-align:center;color:var(--t3)">Campaign not found</div>`;
 
   const c = cRes.data;
   const clients = clRes.success ? clRes.data : [];
   const clientMap = Object.fromEntries(clients.map(cl => [cl.id, cl.name]));
   const pages = (pRes.success ? pRes.data : []).filter(p => p.campaign_id === c.id);
+  const inv   = invRes.success ? invRes.data : null;
 
   let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[], coRevenue=[];
   try { tal=JSON.parse(c.tal||'[]'); } catch {}
@@ -295,6 +296,40 @@ async function renderCampaignDetail(campaignId) {
         ${pagesHtml}
       </div>
 
+      ${inv ? (() => {
+        const hasInvoice  = !!inv.due_date;
+        const canGenerate = !hasInvoice && inv.billable_count > 0;
+        const overdueBadge = inv.overdue ? `<span class="badge badge-red" style="margin-left:8px">Overdue</span>` : '';
+        return `<div class="cd-subsection">
+          <div class="cd-sub-label" style="display:flex;align-items:center;gap:8px">Invoice &amp; Billing${inv.overdue?overdueBadge:''}</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+            <div style="text-align:center">
+              <div class="fs18 fw7">${inv.accepted_count}</div>
+              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Accepted</div>
+            </div>
+            <div style="text-align:center">
+              <div class="fs18 fw7 clr-grn">${inv.billable_count}</div>
+              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Billable</div>
+            </div>
+            <div style="text-align:center">
+              <div class="fs18 fw7" style="color:var(--t3)">${inv.non_billable_count}</div>
+              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Non-billable</div>
+            </div>
+            <div style="text-align:center">
+              <div class="fs18 fw7 clr-grn">$${(inv.total_amount||0).toLocaleString()}</div>
+              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Invoice Total</div>
+            </div>
+          </div>
+          ${hasInvoice ? `<div class="fs12" style="color:var(--t3);margin-bottom:12px">Due: <strong style="color:${inv.overdue?'var(--red)':'var(--t1)'}">${fmtDate(inv.due_date)}</strong></div>` : ''}
+          <div style="display:flex;gap:8px">
+            ${canGenerate ? `<button class="btn btn-pri btn-sm" onclick="generateInvoiceForCampaign(${c.id})">Generate Invoice</button>` : ''}
+            ${hasInvoice && c.status !== 'completed' ? `<button class="btn btn-pri btn-sm" onclick="completeCampaignAction(${c.id})">Complete Campaign</button>` : ''}
+            ${!canGenerate && !hasInvoice ? `<span class="fs12" style="color:var(--t3)">No accepted billable leads yet.</span>` : ''}
+            ${c.status === 'completed' ? `<span class="badge badge-green">Campaign Completed</span>` : ''}
+          </div>
+        </div>`;
+      })() : ''}
+
     </div>
 
     ${c.status==='draft'?`<div class="rq-actions" style="margin-top:12px">
@@ -368,6 +403,30 @@ function viewCampaign(id) { State.viewingCampaign = id; renderModule('campaigns'
 function editCampaignRequest(id) { alert('Campaign edit form — coming soon'); }
 function showNewCampaignForm() { alert('New campaign form — coming soon'); }
 
+async function generateInvoiceForCampaign(id) {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Generating…';
+  const res = await API.generateInvoice(id);
+  if (res.success) {
+    renderModule('campaigns');
+  } else {
+    btn.disabled = false; btn.textContent = 'Generate Invoice';
+    alert('Error: ' + (res.error || 'Unknown error'));
+  }
+}
+
+async function completeCampaignAction(id) {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Completing…';
+  const res = await API.completeCampaign(id);
+  if (res.success) {
+    renderModule('campaigns');
+  } else {
+    btn.disabled = false; btn.textContent = 'Complete Campaign';
+    alert('Error: ' + (res.error || 'Unknown error'));
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // TAL Modal — full target account list
 // ═══════════════════════════════════════════════════════════
@@ -395,11 +454,13 @@ function showTALModal(campaignId) {
   document.body.appendChild(overlay);
 }
 
-window.setCampaignsTab     = setCampaignsTab;
-window.renderCampaigns     = renderCampaigns;
-window.viewCampaign        = viewCampaign;
-window.deployLandingPage   = deployLandingPage;
-window.editCampaignRequest = editCampaignRequest;
-window.showNewCampaignForm = showNewCampaignForm;
-window.showDeployModal     = showDeployModal;
-window.showTALModal        = showTALModal;
+window.setCampaignsTab            = setCampaignsTab;
+window.renderCampaigns            = renderCampaigns;
+window.viewCampaign               = viewCampaign;
+window.deployLandingPage          = deployLandingPage;
+window.editCampaignRequest        = editCampaignRequest;
+window.showNewCampaignForm        = showNewCampaignForm;
+window.showDeployModal            = showDeployModal;
+window.showTALModal               = showTALModal;
+window.generateInvoiceForCampaign = generateInvoiceForCampaign;
+window.completeCampaignAction     = completeCampaignAction;
