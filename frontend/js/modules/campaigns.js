@@ -401,7 +401,101 @@ function showDeployModal(success, url, detail) {
 
 function viewCampaign(id) { State.viewingCampaign = id; renderModule('campaigns'); }
 function editCampaignRequest(id) { alert('Campaign edit form — coming soon'); }
-function showNewCampaignForm() { alert('New campaign form — coming soon'); }
+async function showNewCampaignForm() {
+  const existing = document.getElementById('new-campaign-overlay');
+  if (existing) existing.remove();
+
+  const clRes = await API.getClients();
+  const clients = clRes.success ? clRes.data : [];
+  const clientOptions = clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'new-campaign-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `<div class="modal-box" style="width:480px;max-width:95vw">
+    <div class="fw7 fs16 mb16">New Campaign</div>
+    <div id="nc-error" class="alert a-red mb12" style="display:none"></div>
+
+    <div class="form-group">
+      <label class="form-label">Campaign Name <span style="color:var(--red)">*</span></label>
+      <input id="nc-name" class="form-input" type="text" placeholder="e.g. DemandScience Q3 ABM"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client <span style="color:var(--red)">*</span></label>
+      <select id="nc-client" class="form-input">
+        <option value="">— Select client —</option>
+        ${clientOptions}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Target Leads <span style="color:var(--red)">*</span></label>
+        <input id="nc-target" class="form-input" type="number" min="1" placeholder="500"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">CPL ($) <span style="color:var(--red)">*</span></label>
+        <input id="nc-cpl" class="form-input" type="number" min="0.01" step="0.01" placeholder="45"/>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input id="nc-start" class="form-input" type="date"/>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">End Date</label>
+        <input id="nc-end" class="form-input" type="date"/>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button id="nc-submit" class="btn btn-pri" style="flex:1" onclick="submitNewCampaign()">Create Campaign</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('new-campaign-overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+  document.getElementById('nc-name').focus();
+}
+
+async function submitNewCampaign() {
+  const name      = document.getElementById('nc-name').value.trim();
+  const client_id = parseInt(document.getElementById('nc-client').value);
+  const target    = parseInt(document.getElementById('nc-target').value);
+  const cpl       = parseFloat(document.getElementById('nc-cpl').value);
+  const start_date = document.getElementById('nc-start').value || null;
+  const end_date   = document.getElementById('nc-end').value || null;
+  const errEl      = document.getElementById('nc-error');
+  const submitBtn  = document.getElementById('nc-submit');
+
+  errEl.style.display = 'none';
+
+  if (!name)                  { errEl.textContent = 'Campaign name is required.';    errEl.style.display = ''; return; }
+  if (!client_id)             { errEl.textContent = 'Please select a client.';       errEl.style.display = ''; return; }
+  if (!target || target <= 0) { errEl.textContent = 'Target leads must be > 0.';     errEl.style.display = ''; return; }
+  if (!cpl    || cpl    <= 0) { errEl.textContent = 'CPL must be > 0.';              errEl.style.display = ''; return; }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating…';
+
+  const res = await API.createCampaign({ name, client_id, target, cpl, start_date, end_date, status: 'draft' });
+
+  if (!res.success) {
+    errEl.textContent = res.error || 'Failed to create campaign.';
+    errEl.style.display = '';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Campaign';
+    return;
+  }
+
+  document.getElementById('new-campaign-overlay').remove();
+  State.campaignsTab = 'draft';
+  State.viewingCampaign = null;
+  renderModule('campaigns');
+  refreshBadges();
+}
 
 async function generateInvoiceForCampaign(id) {
   const btn = event.target;
@@ -462,5 +556,6 @@ window.editCampaignRequest        = editCampaignRequest;
 window.showNewCampaignForm        = showNewCampaignForm;
 window.showDeployModal            = showDeployModal;
 window.showTALModal               = showTALModal;
+window.submitNewCampaign          = submitNewCampaign;
 window.generateInvoiceForCampaign = generateInvoiceForCampaign;
 window.completeCampaignAction     = completeCampaignAction;
