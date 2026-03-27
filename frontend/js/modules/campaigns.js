@@ -344,9 +344,146 @@ async function renderCampaignDetail(campaignId) {
 // ═══════════════════════════════════════════════════════════
 async function deployLandingPage(campaignId) {
   const res = await API.getCampaign(campaignId);
-  if (!res.success) { showDeployModal(false, '', 'Error loading campaign'); return; }
+  if (!res.success) { showToast('Error loading campaign', 'error'); return; }
   const c = res.data;
 
+  // Show generating state
+  showGeneratingModal(c.asset_name || c.name);
+
+  const genRes = await API.generatePage(campaignId);
+
+  if (!genRes.success) {
+    removeGeneratingModal();
+    showToast('Copy generation failed: ' + (genRes.error || 'Unknown error'), 'error');
+    // Fall back to basic deploy without AI copy
+    await _deployPageWithCopy(c, null);
+    return;
+  }
+
+  removeGeneratingModal();
+  showCopyPreviewModal(c, genRes.data);
+}
+
+function showGeneratingModal(assetName) {
+  const existing = document.getElementById('gen-modal-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'gen-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal-box" style="text-align:center">
+    <div style="font-size:36px;margin-bottom:16px">✍️</div>
+    <div class="fw5 fs16 mb8">Writing your landing page…</div>
+    <div class="fs13" style="color:var(--text-tertiary);margin-bottom:20px;max-width:300px;margin-left:auto;margin-right:auto">
+      Claude is reading <strong style="color:var(--text-primary)">${assetName}</strong> and crafting copy for your target audience.
+    </div>
+    <div style="display:flex;justify-content:center;gap:6px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--blue-600);animation:pulse 1.2s ease-in-out infinite"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--blue-600);animation:pulse 1.2s ease-in-out 0.2s infinite"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--blue-600);animation:pulse 1.2s ease-in-out 0.4s infinite"></div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function removeGeneratingModal() {
+  document.getElementById('gen-modal-overlay')?.remove();
+}
+
+function showCopyPreviewModal(c, copy) {
+  const existing = document.getElementById('preview-modal-overlay');
+  if (existing) existing.remove();
+
+  const bulletsHtml = (copy.bullets || []).map(b =>
+    `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)">
+      <span style="font-size:18px;flex-shrink:0">${b.icon}</span>
+      <div>
+        <div class="fw5 fs13">${b.title}</div>
+        <div class="fs12" style="color:var(--text-secondary);margin-top:2px;line-height:1.5">${b.body}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'preview-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `<div class="modal-box" style="max-width:560px;width:95vw;text-align:left;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div class="page-overline">AI Generated Copy</div>
+        <div class="fw5 fs16">Landing Page Preview</div>
+      </div>
+      <button class="btn-icon" onclick="document.getElementById('preview-modal-overlay').remove()">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:16px">
+      <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Headline</div>
+      <div class="fw5 fs15" style="line-height:1.4">${copy.headline || '—'}</div>
+    </div>
+
+    <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:16px">
+      <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Subheadline</div>
+      <div class="fs13" style="color:var(--text-secondary);line-height:1.5">${copy.subheadline || '—'}</div>
+    </div>
+
+    ${copy.hook ? `<div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:16px">
+      <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Hook</div>
+      <div class="fs13" style="color:var(--text-secondary);line-height:1.5">${copy.hook}</div>
+    </div>` : ''}
+
+    <div style="margin-bottom:16px">
+      <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-left:2px">Benefits</div>
+      <div style="border:0.5px solid var(--border);border-radius:var(--radius-md);overflow:hidden;padding:0 16px">
+        ${bulletsHtml}
+        <div style="padding:10px 0">
+          <div class="fw5 fs13">CTA: <span style="color:var(--blue-600)">${copy.cta || 'Download Now'}</span></div>
+        </div>
+      </div>
+    </div>
+
+    ${copy.social_proof ? `<div class="fs12" style="color:var(--text-tertiary);margin-bottom:20px;font-style:italic">"${copy.social_proof}"</div>` : ''}
+
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-pri" style="flex:1" onclick="approveCopyAndDeploy(${c.id}, ${c.client_id})">
+        Deploy Live Page →
+      </button>
+      <button class="btn btn-secondary" onclick="regenerateCopy(${c.id})">↻ Regenerate</button>
+    </div>
+    <div class="fs11" style="color:var(--text-tertiary);text-align:center;margin-top:10px">Review the copy above before going live. You can regenerate if needed.</div>
+  </div>`;
+
+  // Stash copy on window so approve can access it
+  window._pendingPageCopy = copy;
+  document.body.appendChild(overlay);
+}
+
+async function approveCopyAndDeploy(campaignId, clientId) {
+  const copy = window._pendingPageCopy;
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+
+  document.getElementById('preview-modal-overlay')?.remove();
+  await _deployPageWithCopy(cRes.data, copy);
+}
+
+async function regenerateCopy(campaignId) {
+  document.getElementById('preview-modal-overlay')?.remove();
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+  showGeneratingModal(cRes.data.asset_name || cRes.data.name);
+  const genRes = await API.generatePage(campaignId);
+  removeGeneratingModal();
+  if (!genRes.success) {
+    showToast('Regeneration failed: ' + (genRes.error || 'Unknown'), 'error');
+    return;
+  }
+  showCopyPreviewModal(cRes.data, genRes.data);
+}
+
+async function _deployPageWithCopy(c, copy) {
   let customQ = [];
   try { customQ = JSON.parse(c.custom_questions || '[]'); } catch {}
   const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -354,25 +491,27 @@ async function deployLandingPage(campaignId) {
   const pageData = {
     campaign_id: c.id, client_id: c.client_id,
     name: c.name + ' Landing Page', slug,
-    headline: c.asset_name ? `Download: ${c.asset_name}` : 'Download Your Free Resource',
-    subheadline: 'Fill out the form below to get instant access to this exclusive resource.',
-    cta_text: 'Download Now', status: 'active', custom_questions: customQ,
+    headline: copy?.headline || (c.asset_name ? `Download: ${c.asset_name}` : 'Download Your Free Resource'),
+    subheadline: copy?.subheadline || 'Fill out the form to get instant access.',
+    cta_text: copy?.cta || 'Download Now',
+    status: 'active', custom_questions: customQ,
     brand_color: c.brand_color||'#2563eb', brand_color_secondary: c.brand_color_secondary||'#1e40af',
     brand_accent: c.brand_accent||'#3b82f6', logo_url: c.logo_url||null,
     asset_url: c.asset_url||null, asset_name: c.asset_name||null,
+    ai_copy: copy || null,
   };
 
   const createRes = await API.createPage(pageData);
-  const liveUrl = `https://boss-api.mehtahouse.cc/lp/${slug}`;
+  const liveUrl   = `https://boss-api.mehtahouse.cc/lp/${slug}`;
 
   if (!createRes.success) {
     showDeployModal(false, liveUrl, createRes.error || 'Unknown error');
     return;
   }
 
-  await API.updateCampaign(campaignId, { status: 'active' });
-  State.campaignsTab = 'active';
-  State.viewingCampaign = campaignId;
+  await API.updateCampaign(c.id, { status: 'active' });
+  State.campaignsTab    = 'active';
+  State.viewingCampaign = c.id;
   renderModule('campaigns');
   refreshBadges();
   showDeployModal(true, liveUrl, c.name);
@@ -651,6 +790,8 @@ window.setCampaignsTab            = setCampaignsTab;
 window.renderCampaigns            = renderCampaigns;
 window.viewCampaign               = viewCampaign;
 window.deployLandingPage          = deployLandingPage;
+window.approveCopyAndDeploy       = approveCopyAndDeploy;
+window.regenerateCopy             = regenerateCopy;
 window.editCampaignRequest        = editCampaignRequest;
 window.showNewCampaignForm        = showNewCampaignForm;
 window.showDeployModal            = showDeployModal;

@@ -97,6 +97,7 @@ const API = {
   getPages:       ()          => apiFetch('/api/pages'),
   getPage:        (id)        => apiFetch(`/api/pages/${id}`),
   createPage:     (body)      => apiFetch('/api/pages', { method: 'POST', body: JSON.stringify(body) }),
+  generatePage:   (campaignId) => apiFetch(`/api/campaigns/${campaignId}/generate-page`, { method: 'POST', body: '{}' }),
   updatePage:     (id, body)  => apiFetch(`/api/pages/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deletePage:     (id)        => apiFetch(`/api/pages/${id}`, { method: 'DELETE' }),
   submitPage:     (slug, body)=> apiFetch(`/api/pages/${slug}/submit`, { method: 'POST', body: JSON.stringify(body) }),

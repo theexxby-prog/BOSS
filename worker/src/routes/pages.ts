@@ -46,15 +46,16 @@ export const pagesRouter: RouteHandler = async (request, env) => {
   if (request.method === 'POST') {
     const b: any = await request.json();
     const result = await dbRun(env.DB,
-      `INSERT INTO landing_pages (campaign_id,client_id,asset_id,name,slug,headline,subheadline,cta_text,fields,status,custom_questions,brand_color,brand_color_secondary,brand_accent,logo_url,asset_url,asset_name)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO landing_pages (campaign_id,client_id,asset_id,name,slug,headline,subheadline,cta_text,fields,status,custom_questions,brand_color,brand_color_secondary,brand_accent,logo_url,asset_url,asset_name,ai_copy)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [b.campaign_id??null, b.client_id??null, b.asset_id??null, b.name, b.slug,
        b.headline??null, b.subheadline??null, b.cta_text??'Download Now',
        b.fields ? JSON.stringify(b.fields) : '["first_name","last_name","email","company","title","phone"]',
        b.status??'draft',
        b.custom_questions ? JSON.stringify(b.custom_questions) : '[]',
        b.brand_color??'#2563eb', b.brand_color_secondary??'#1e40af', b.brand_accent??'#3b82f6',
-       b.logo_url??null, b.asset_url??null, b.asset_name??null]
+       b.logo_url??null, b.asset_url??null, b.asset_name??null,
+       b.ai_copy ? JSON.stringify(b.ai_copy) : null]
     );
     return jsonResponse({ success: true, id: result.lastRowId }, 201, origin);
   }
@@ -64,13 +65,14 @@ export const pagesRouter: RouteHandler = async (request, env) => {
     await dbRun(env.DB,
       `UPDATE landing_pages SET name=?,slug=?,headline=?,subheadline=?,cta_text=?,fields=?,status=?,
        custom_questions=?,brand_color=?,brand_color_secondary=?,brand_accent=?,logo_url=?,asset_url=?,asset_name=?,
-       updated_at=datetime('now') WHERE id=?`,
+       ai_copy=?,updated_at=datetime('now') WHERE id=?`,
       [b.name, b.slug, b.headline??null, b.subheadline??null, b.cta_text??'Download Now',
        b.fields ? JSON.stringify(b.fields) : '["first_name","last_name","email","company","title","phone"]',
        b.status??'draft',
        b.custom_questions ? JSON.stringify(b.custom_questions) : '[]',
        b.brand_color??'#2563eb', b.brand_color_secondary??'#1e40af', b.brand_accent??'#3b82f6',
        b.logo_url??null, b.asset_url??null, b.asset_name??null,
+       b.ai_copy ? JSON.stringify(b.ai_copy) : null,
        String(id)]
     );
     return jsonResponse({ success: true }, 200, origin);

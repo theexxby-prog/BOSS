@@ -3,6 +3,8 @@
 export interface Env {
   DB: D1Database;
   BOSS_API_TOKEN: string;
+  ANTHROPIC_API_KEY: string;
+  NEVERBOUNCE_API_KEY: string;
 }
 
 // ─── Clients ───────────────────────────────────────────────────────────────

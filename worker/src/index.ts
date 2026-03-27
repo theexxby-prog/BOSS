@@ -20,6 +20,7 @@ import { landingPageRenderer } from './routes/landing-page';
 import { billingRouter }       from './routes/billing';
 import { webhooksRouter }      from './routes/webhooks';
 import { campaignLeadsRouter } from './routes/campaign-leads';
+import { generatePageRouter }  from './routes/generate-page';
 import { dbFirst, dbAll }      from './db';
 
 export default {
@@ -96,6 +97,8 @@ export default {
       return campaignLeadsRouter(request, env, origin);
     if (path.startsWith('/api/campaigns/') && path.endsWith('/generate-invoice') && request.method === 'POST')
       return campaignLeadsRouter(request, env, origin);
+    if (path.startsWith('/api/campaigns/') && path.endsWith('/generate-page') && request.method === 'POST')
+      return generatePageRouter(request, env, origin);
     if (path.startsWith('/api/campaigns'))   return campaignsRouter(request, env, origin);
     if (path.startsWith('/api/leads'))       return leadsRouter(request, env, origin);
     if (path.startsWith('/api/deliveries'))  return deliveriesRouter(request, env, origin);

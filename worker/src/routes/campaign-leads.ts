@@ -383,6 +383,14 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
         [campaignId]
       );
 
+      // Archive landing pages — preserve them in DB, just take them off public access.
+      // Pages are never deleted; archived status allows future reference and analytics.
+      await dbRun(env.DB,
+        `UPDATE landing_pages SET status = 'archived', updated_at = datetime('now')
+         WHERE campaign_id = ? AND status = 'active'`,
+        [campaignId]
+      );
+
       const preview = await dbFirst<{
         accepted_count: number; billable_count: number;
         non_billable_count: number; total_amount: number | null;
