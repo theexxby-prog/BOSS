@@ -72,6 +72,8 @@ export default {
     if (path.startsWith('/api/campaign-leads')) return campaignLeadsRouter(request, env, origin);
     if (path.startsWith('/api/campaigns/') && path.endsWith('/leads') && request.method === 'POST')
       return campaignLeadsRouter(request, env, origin);
+    if (path.startsWith('/api/campaigns/') && path.endsWith('/generate-invoice') && request.method === 'POST')
+      return campaignLeadsRouter(request, env, origin);
     if (path.startsWith('/api/campaigns'))   return campaignsRouter(request, env, origin);
     if (path.startsWith('/api/leads'))       return leadsRouter(request, env, origin);
     if (path.startsWith('/api/deliveries'))  return deliveriesRouter(request, env, origin);

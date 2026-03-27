@@ -1,6 +1,6 @@
 import type { Env } from '../types';
 import { jsonResponse } from '../cors';
-import { dbFirst, dbRun } from '../db';
+import { dbAll, dbFirst, dbRun } from '../db';
 
 const VALID_SOURCES = ['apollo', 'manual', 'import'];
 
@@ -131,6 +131,83 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
           status: 'delivered',
         },
       }, 200, origin);
+    }
+
+    // POST /api/campaigns/:id/generate-invoice
+    if (
+      request.method === 'POST' &&
+      segments[1] === 'campaigns' &&
+      segments[3] === 'generate-invoice'
+    ) {
+      const campaignId = Number(segments[2]);
+      if (!campaignId || isNaN(campaignId)) {
+        return jsonResponse({ success: false, error: 'Invalid campaign id' }, 400, origin);
+      }
+
+      // Validate campaign exists
+      const campaign = await dbFirst<{ id: number; client_id: number; name: string }>(
+        env.DB, 'SELECT id, client_id, name FROM campaigns WHERE id = ?', [campaignId]
+      );
+      if (!campaign) return jsonResponse({ success: false, error: 'Campaign not found' }, 404, origin);
+
+      // Idempotent: return existing invoice if already generated
+      const existing = await dbFirst<{
+        id: number; invoice_number: string; campaign_id: number;
+        client_id: number; leads_count: number; total: number; status: string;
+      }>(env.DB, 'SELECT * FROM invoices WHERE campaign_id = ?', [campaignId]);
+      if (existing) {
+        return jsonResponse({ success: true, data: existing }, 200, origin);
+      }
+
+      // Aggregate billable leads in SQL — never in JS
+      const totals = await dbFirst<{ leads_count: number; total: number | null }>(
+        env.DB,
+        `SELECT COUNT(*) as leads_count,
+                ROUND(SUM(price_at_acceptance), 2) as total
+         FROM campaign_leads
+         WHERE campaign_id = ?
+           AND status = 'accepted'
+           AND billing_status = 'billable'
+           AND price_at_acceptance IS NOT NULL`,
+        [campaignId]
+      );
+      if (!totals || totals.leads_count === 0) {
+        return jsonResponse({ success: false, error: 'No accepted billable leads found for this campaign' }, 422, origin);
+      }
+
+      const invoice_number = `INV-${campaignId}-${Date.now()}`;
+
+      const result = await dbRun(env.DB,
+        `INSERT INTO invoices (client_id, campaign_id, invoice_number, leads_count, total, status, created_at)
+         VALUES (?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP)`,
+        [campaign.client_id, campaignId, invoice_number, totals.leads_count, totals.total]
+      );
+      const invoiceId = result.lastRowId;
+
+      // Stamp invoice_id on all qualifying leads.
+      // Once invoice_id is set, a campaign_lead must not be modified by billing or other updates (enforced in later stages).
+      await dbRun(env.DB,
+        `UPDATE campaign_leads
+         SET invoice_id = ?
+         WHERE campaign_id = ?
+           AND status = 'accepted'
+           AND billing_status = 'billable'
+           AND price_at_acceptance IS NOT NULL`,
+        [invoiceId, campaignId]
+      );
+
+      return jsonResponse({
+        success: true,
+        data: {
+          invoice_id: invoiceId,
+          invoice_number,
+          campaign_id: campaignId,
+          client_id: campaign.client_id,
+          leads_count: totals.leads_count,
+          total: totals.total,
+          status: 'draft',
+        },
+      }, 201, origin);
     }
 
     // POST /api/campaign-leads/:id/billing
