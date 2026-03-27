@@ -46,6 +46,11 @@ export default {
       return pagesRouter(request, env);
     }
 
+    // ── Public: inbound webhooks (provider-specific signature auth, not bearer)
+    if (path.startsWith('/api/webhooks/')) {
+      return webhooksRouter(request, origin);
+    }
+
     // ── Auth guard — all other /api/* routes ─────────────────────────────────
     const authHeader = request.headers.get('Authorization') || '';
     const token      = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
