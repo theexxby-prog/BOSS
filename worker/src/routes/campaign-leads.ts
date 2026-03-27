@@ -264,6 +264,14 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
         [campaignId]
       );
 
+      const invoice = await dbFirst<{ due_date: string | null; status: string }>(
+        env.DB, 'SELECT due_date, status FROM invoices WHERE campaign_id = ?', [campaignId]
+      );
+      const overdue = !!invoice &&
+        invoice.status !== 'paid' &&
+        !!invoice.due_date &&
+        new Date(invoice.due_date + 'T23:59:59Z') < new Date();
+
       return jsonResponse({
         success: true,
         data: {
@@ -272,6 +280,8 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
           billable_count: preview?.billable_count ?? 0,
           non_billable_count: preview?.non_billable_count ?? 0,
           total_amount: preview?.total_amount ?? 0,
+          due_date: invoice?.due_date ?? null,
+          overdue,
         },
       }, 200, origin);
     }
@@ -287,9 +297,14 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
         return jsonResponse({ success: false, error: 'Invalid campaign id' }, 400, origin);
       }
 
-      // Validate campaign exists
-      const campaign = await dbFirst<{ id: number; client_id: number; name: string }>(
-        env.DB, 'SELECT id, client_id, name FROM campaigns WHERE id = ?', [campaignId]
+      // Validate campaign exists and fetch payment terms from client
+      const campaign = await dbFirst<{ id: number; client_id: number; name: string; payment_terms_days: number }>(
+        env.DB,
+        `SELECT c.id, c.client_id, c.name, cl.payment_terms_days
+         FROM campaigns c
+         JOIN clients cl ON c.client_id = cl.id
+         WHERE c.id = ?`,
+        [campaignId]
       );
       if (!campaign) return jsonResponse({ success: false, error: 'Campaign not found' }, 404, origin);
 
@@ -322,9 +337,9 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       const cpl = Math.round((totals.total! / totals.leads_count) * 100) / 100;
 
       const result = await dbRun(env.DB,
-        `INSERT INTO invoices (client_id, campaign_id, invoice_number, leads_count, cpl, total, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP)`,
-        [campaign.client_id, campaignId, invoice_number, totals.leads_count, cpl, totals.total]
+        `INSERT INTO invoices (client_id, campaign_id, invoice_number, leads_count, cpl, total, due_date, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, date('now', '+' || ? || ' days'), 'draft', CURRENT_TIMESTAMP)`,
+        [campaign.client_id, campaignId, invoice_number, totals.leads_count, cpl, totals.total, campaign.payment_terms_days]
       );
       const invoiceId = result.lastRowId;
 
@@ -340,6 +355,11 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
         [invoiceId, campaignId]
       );
 
+      // Fetch due_date from DB — source of truth
+      const created = await dbFirst<{ due_date: string | null }>(
+        env.DB, 'SELECT due_date FROM invoices WHERE id = ?', [invoiceId]
+      );
+
       return jsonResponse({
         success: true,
         data: {
@@ -349,6 +369,8 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
           client_id: campaign.client_id,
           leads_count: totals.leads_count,
           total: totals.total,
+          due_date: created?.due_date ?? null,
+          overdue: false, // newly created invoices are never overdue
           status: 'draft',
         },
       }, 201, origin);
