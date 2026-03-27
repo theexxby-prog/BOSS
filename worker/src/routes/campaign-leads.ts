@@ -11,6 +11,110 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
   const campaignId = segments[2] ? parseInt(segments[2]) : null;
 
   try {
+    // GET /api/alerts
+    if (request.method === 'GET' && segments[1] === 'alerts' && segments.length === 2) {
+      const [lowAcceptanceRows, noDeliveryRows, pacingRows] = await Promise.all([
+
+        // Alert 1 — Low Acceptance
+        dbAll<{ campaign_id: number; campaign_name: string; delivered: number; accepted: number }>(env.DB,
+          `SELECT
+             c.id as campaign_id,
+             c.name as campaign_name,
+             COUNT(CASE WHEN cl.status = 'delivered' THEN 1 END) as delivered,
+             COUNT(CASE WHEN cl.status = 'accepted' THEN 1 END) as accepted
+           FROM campaigns c
+           JOIN campaign_leads cl ON cl.campaign_id = c.id
+           WHERE c.status = 'active'
+           GROUP BY c.id, c.name
+           HAVING delivered > 0
+              AND CAST(accepted AS REAL) / NULLIF(delivered, 0) < 0.5`
+        ),
+
+        // Alert 2 — No Delivery
+        dbAll<{ campaign_id: number; campaign_name: string; total_leads: number }>(env.DB,
+          `SELECT
+             c.id as campaign_id,
+             c.name as campaign_name,
+             COUNT(cl.id) as total_leads
+           FROM campaigns c
+           LEFT JOIN campaign_leads cl ON cl.campaign_id = c.id
+           WHERE c.status = 'active'
+           GROUP BY c.id, c.name
+           HAVING SUM(CASE WHEN cl.status IN ('delivered','accepted','rejected') THEN 1 ELSE 0 END) = 0`
+        ),
+
+        // Alert 3 — Behind Pacing
+        dbAll<{
+          campaign_id: number; campaign_name: string;
+          target: number; start_date: string; end_date: string; actual_delivered: number;
+        }>(env.DB,
+          `SELECT
+             c.id as campaign_id,
+             c.name as campaign_name,
+             c.target,
+             c.start_date,
+             c.end_date,
+             COUNT(CASE WHEN cl.status IN ('delivered','accepted','rejected') THEN 1 END) as actual_delivered
+           FROM campaigns c
+           LEFT JOIN campaign_leads cl ON cl.campaign_id = c.id
+           WHERE c.status = 'active'
+             AND c.start_date IS NOT NULL
+             AND c.end_date IS NOT NULL
+             AND c.target > 0
+           GROUP BY c.id, c.name, c.target, c.start_date, c.end_date`
+        ),
+      ]);
+
+      const alerts: unknown[] = [];
+
+      for (const row of lowAcceptanceRows) {
+        alerts.push({
+          type: 'low_acceptance',
+          campaign_id: row.campaign_id,
+          campaign_name: row.campaign_name,
+          delivered: row.delivered,
+          accepted: row.accepted,
+          acceptance_rate: Math.round((row.accepted / row.delivered) * 100),
+        });
+      }
+
+      for (const row of noDeliveryRows) {
+        alerts.push({
+          type: 'no_delivery',
+          campaign_id: row.campaign_id,
+          campaign_name: row.campaign_name,
+          total_leads: row.total_leads,
+        });
+      }
+
+      for (const row of pacingRows) {
+        const start = new Date(row.start_date).getTime();
+        const end = new Date(row.end_date).getTime();
+        const totalDays = Math.max(1, Math.ceil((end - start) / 86400000));
+        const elapsedRaw = Math.ceil((Date.now() - start) / 86400000);
+        const elapsed = Math.max(0, Math.min(totalDays, elapsedRaw));
+        const progress = elapsed / totalDays;
+        const expected = Math.floor(row.target * progress);
+        const behind = row.actual_delivered < expected * 0.8;
+
+        if (behind && expected > 0) {
+          alerts.push({
+            type: 'behind_pacing',
+            campaign_id: row.campaign_id,
+            campaign_name: row.campaign_name,
+            target: row.target,
+            expected,
+            actual: row.actual_delivered,
+            progress_pct: Math.round(progress * 100),
+          });
+        }
+      }
+
+      alerts.sort((a: any, b: any) => a.type.localeCompare(b.type));
+
+      return jsonResponse({ success: true, data: { alerts, count: alerts.length } }, 200, origin);
+    }
+
     // POST /api/campaigns/:id/leads  (segments: api, campaigns, :id, leads)
     if (request.method === 'POST' && segments[1] === 'campaigns' && segments[3] === 'leads' && campaignId) {
       const body = await request.json() as Record<string, unknown>;

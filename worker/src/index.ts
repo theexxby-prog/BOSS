@@ -69,6 +69,7 @@ export default {
 
     // ── Route dispatch ───────────────────────────────────────────────────────
     if (path.startsWith('/api/clients'))     return clientsRouter(request, env, origin);
+    if (path === '/api/alerts' && request.method === 'GET') return campaignLeadsRouter(request, env, origin);
     if (path.startsWith('/api/campaign-leads')) return campaignLeadsRouter(request, env, origin);
     if (path.startsWith('/api/campaigns/') && path.endsWith('/leads') && request.method === 'POST')
       return campaignLeadsRouter(request, env, origin);
