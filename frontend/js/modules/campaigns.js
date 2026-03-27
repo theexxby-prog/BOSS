@@ -402,7 +402,7 @@ function showDeployModal(success, url, detail) {
 function viewCampaign(id) { State.viewingCampaign = id; renderModule('campaigns'); }
 async function editCampaignRequest(id) {
   const [cRes, clRes] = await Promise.all([API.getCampaign(id), API.getClients()]);
-  if (!cRes.success) { alert('Could not load campaign.'); return; }
+  if (!cRes.success) { showToast('Could not load campaign', 'error'); return; }
   const c = cRes.data;
   const clients = clRes.success ? clRes.data : [];
   const clientOptions = clients.map(cl =>
@@ -419,7 +419,6 @@ async function editCampaignRequest(id) {
 
   overlay.innerHTML = `<div class="modal-box" style="width:480px;max-width:95vw">
     <div class="fw7 fs16 mb16">Edit Campaign</div>
-    <div id="ec-error" class="alert a-red mb12" style="display:none"></div>
 
     <div class="form-group">
       <label class="form-label">Campaign Name <span style="color:var(--red)">*</span></label>
@@ -476,27 +475,28 @@ async function submitEditCampaign(id) {
   const start_date = document.getElementById('ec-start').value || null;
   const end_date   = document.getElementById('ec-end').value || null;
   const status     = document.getElementById('ec-status').value;
-  const errEl      = document.getElementById('ec-error');
   const submitBtn  = document.getElementById('ec-submit');
 
-  errEl.style.display = 'none';
-  if (!name)                  { errEl.textContent = 'Campaign name is required.'; errEl.style.display = ''; return; }
-  if (!client_id)             { errEl.textContent = 'Please select a client.';    errEl.style.display = ''; return; }
-  if (!target || target <= 0) { errEl.textContent = 'Target leads must be > 0.';  errEl.style.display = ''; return; }
-  if (!cpl    || cpl    <= 0) { errEl.textContent = 'CPL must be > 0.';           errEl.style.display = ''; return; }
+  clearAllFieldErrors('ec-name', 'ec-client', 'ec-target', 'ec-cpl');
+  let valid = true;
+  if (!name)                  { showFieldError('ec-name',   'Campaign name is required'); valid = false; }
+  if (!client_id)             { showFieldError('ec-client', 'Please select a client');    valid = false; }
+  if (!target || target <= 0) { showFieldError('ec-target', 'Must be greater than 0');    valid = false; }
+  if (!cpl    || cpl    <= 0) { showFieldError('ec-cpl',    'Must be greater than 0');    valid = false; }
+  if (!valid) return;
 
   submitBtn.disabled = true; submitBtn.textContent = 'Saving…';
 
   const res = await API.updateCampaign(id, { name, client_id, target, cpl, start_date, end_date, status });
 
   if (!res.success) {
-    errEl.textContent = res.error || 'Failed to save changes.';
-    errEl.style.display = '';
+    showToast(res.error || 'Failed to save changes', 'error');
     submitBtn.disabled = false; submitBtn.textContent = 'Save Changes';
     return;
   }
 
   document.getElementById('edit-campaign-overlay').remove();
+  showToast('Campaign updated');
   renderModule('campaigns');
 }
 async function showNewCampaignForm() {
@@ -514,7 +514,6 @@ async function showNewCampaignForm() {
 
   overlay.innerHTML = `<div class="modal-box" style="width:480px;max-width:95vw">
     <div class="fw7 fs16 mb16">New Campaign</div>
-    <div id="nc-error" class="alert a-red mb12" style="display:none"></div>
 
     <div class="form-group">
       <label class="form-label">Campaign Name <span style="color:var(--red)">*</span></label>
@@ -565,15 +564,15 @@ async function submitNewCampaign() {
   const cpl       = parseFloat(document.getElementById('nc-cpl').value);
   const start_date = document.getElementById('nc-start').value || null;
   const end_date   = document.getElementById('nc-end').value || null;
-  const errEl      = document.getElementById('nc-error');
   const submitBtn  = document.getElementById('nc-submit');
 
-  errEl.style.display = 'none';
-
-  if (!name)                  { errEl.textContent = 'Campaign name is required.';    errEl.style.display = ''; return; }
-  if (!client_id)             { errEl.textContent = 'Please select a client.';       errEl.style.display = ''; return; }
-  if (!target || target <= 0) { errEl.textContent = 'Target leads must be > 0.';     errEl.style.display = ''; return; }
-  if (!cpl    || cpl    <= 0) { errEl.textContent = 'CPL must be > 0.';              errEl.style.display = ''; return; }
+  clearAllFieldErrors('nc-name', 'nc-client', 'nc-target', 'nc-cpl');
+  let valid = true;
+  if (!name)                  { showFieldError('nc-name',   'Campaign name is required'); valid = false; }
+  if (!client_id)             { showFieldError('nc-client', 'Please select a client');    valid = false; }
+  if (!target || target <= 0) { showFieldError('nc-target', 'Must be greater than 0');    valid = false; }
+  if (!cpl    || cpl    <= 0) { showFieldError('nc-cpl',    'Must be greater than 0');    valid = false; }
+  if (!valid) return;
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Creating…';
@@ -581,8 +580,7 @@ async function submitNewCampaign() {
   const res = await API.createCampaign({ name, client_id, target, cpl, start_date, end_date, status: 'draft' });
 
   if (!res.success) {
-    errEl.textContent = res.error || 'Failed to create campaign.';
-    errEl.style.display = '';
+    showToast(res.error || 'Failed to create campaign', 'error');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Create Campaign';
     return;
@@ -593,6 +591,7 @@ async function submitNewCampaign() {
   State.viewingCampaign = null;
   renderModule('campaigns');
   refreshBadges();
+  showToast('Campaign created');
 }
 
 async function generateInvoiceForCampaign(id) {
@@ -600,10 +599,11 @@ async function generateInvoiceForCampaign(id) {
   btn.disabled = true; btn.textContent = 'Generating…';
   const res = await API.generateInvoice(id);
   if (res.success) {
+    showToast('Invoice generated');
     renderModule('campaigns');
   } else {
     btn.disabled = false; btn.textContent = 'Generate Invoice';
-    alert('Error: ' + (res.error || 'Unknown error'));
+    showToast(res.error || 'Failed to generate invoice', 'error');
   }
 }
 
@@ -612,10 +612,11 @@ async function completeCampaignAction(id) {
   btn.disabled = true; btn.textContent = 'Completing…';
   const res = await API.completeCampaign(id);
   if (res.success) {
+    showToast('Campaign completed');
     renderModule('campaigns');
   } else {
     btn.disabled = false; btn.textContent = 'Complete Campaign';
-    alert('Error: ' + (res.error || 'Unknown error'));
+    showToast(res.error || 'Failed to complete campaign', 'error');
   }
 }
 

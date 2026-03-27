@@ -191,8 +191,8 @@ async function renderLeads() {
         <td class="fs12 fw7 clr-grn">${l.price_at_acceptance != null ? '$'+l.price_at_acceptance : '—'}</td>
         <td>
           <div class="flex gap6">
-            ${canQA      ? `<button class="btn btn-ghost btn-sm fs11" onclick="clQA(${l.campaign_lead_id})">Run QA</button>` : ''}
-            ${canDeliver ? `<button class="btn btn-ghost btn-sm fs11" onclick="clDeliver(${l.campaign_lead_id})">Deliver</button>` : ''}
+            ${canQA      ? `<button class="btn btn-ghost btn-sm fs11" onclick="clQA(${l.campaign_lead_id}, this)">Run QA</button>` : ''}
+            ${canDeliver ? `<button class="btn btn-ghost btn-sm fs11" onclick="clDeliver(${l.campaign_lead_id}, this)">Deliver</button>` : ''}
             ${canAccept  ? `<button class="btn btn-ghost btn-sm fs11" onclick="clAccept(${l.campaign_lead_id})">Accept</button>` : ''}
             ${canBilling ? `<button class="btn btn-ghost btn-sm fs11" onclick="clBilling(${l.campaign_lead_id},'${l.billing_status}')">${l.billing_status === 'billable' ? 'Non-billable' : 'Billable'}</button>` : ''}
           </div>
@@ -219,52 +219,88 @@ async function renderLeads() {
 
 async function approveLead(id) {
   await API.updateLead(id, { status: 'approved' });
+  showToast('Lead approved');
   renderModule('leads');
 }
 
-async function rejectLead(id) {
-  const reason = prompt('Rejection reason (optional):') || 'Does not meet ICP';
-  await API.updateLead(id, { status: 'rejected', rejection_reason: reason });
-  renderModule('leads');
+function rejectLead(id) {
+  showPromptModal({
+    title: 'Reject Lead',
+    label: 'Reason (optional)',
+    placeholder: 'Does not meet ICP',
+    confirmText: 'Reject',
+    onConfirm: async (reason) => {
+      await API.updateLead(id, { status: 'rejected', rejection_reason: reason || 'Does not meet ICP' });
+      showToast('Lead rejected', 'info');
+      renderModule('leads');
+    },
+  });
 }
 
 async function scoreLead(id) {
   const res = await API.scoreLead(id);
-  if (res.success) alert(`ICP Score: ${res.score} → ${res.status}`);
+  if (res.success) showToast(`ICP Score: ${res.score} → ${res.status}`);
   renderModule('leads');
 }
 
 function setCLCampaignFilter(val) { State.clCampaignFilter = val; renderModule('leads'); }
 
-async function clQA(id) {
+async function clQA(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Running…'; }
   const res = await API.qaLead(id);
-  if (!res.success) { alert('QA error: ' + (res.error || 'Unknown')); return; }
+  if (!res.success) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Run QA'; }
+    showToast('QA error: ' + (res.error || 'Unknown'), 'error');
+    return;
+  }
+  showToast('QA complete — ' + (res.qa_status || 'done'));
   renderModule('leads');
 }
 
-async function clDeliver(id) {
+async function clDeliver(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Delivering…'; }
   const res = await API.deliverLead(id);
-  if (!res.success) { alert('Deliver error: ' + (res.error || 'Unknown')); return; }
+  if (!res.success) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Deliver'; }
+    showToast('Deliver error: ' + (res.error || 'Unknown'), 'error');
+    return;
+  }
+  showToast('Lead delivered');
   renderModule('leads');
 }
 
-async function clAccept(id) {
-  const priceStr = prompt('Accept price per lead ($):');
-  if (priceStr === null) return;
-  const price = parseFloat(priceStr);
-  if (isNaN(price) || price < 0) { alert('Invalid price'); return; }
-  const res = await API.acceptLead(id, { price });
-  if (!res.success) { alert('Accept error: ' + (res.error || 'Unknown')); return; }
-  renderModule('leads');
+function clAccept(id) {
+  showPromptModal({
+    title: 'Accept Lead',
+    label: 'Price per lead ($)',
+    placeholder: '0.00',
+    type: 'number',
+    confirmText: 'Accept',
+    onConfirm: async (priceStr) => {
+      const price = parseFloat(priceStr);
+      if (isNaN(price) || price < 0) throw new Error('Enter a valid price (0 or more)');
+      const res = await API.acceptLead(id, { price });
+      if (!res.success) throw new Error(res.error || 'Accept failed');
+      showToast('Lead accepted');
+      renderModule('leads');
+    },
+  });
 }
 
-async function clBilling(id, current) {
+function clBilling(id, current) {
   const next = current === 'billable' ? 'non-billable' : 'billable';
-  const reason = prompt(`Override to ${next}. Reason (optional):`) ?? '';
-  if (reason === null) return;
-  const res = await API.billingOverride(id, { billing_status: next, reason, overridden_by: 'Vishal' });
-  if (!res.success) { alert('Billing error: ' + (res.error || 'Unknown')); return; }
-  renderModule('leads');
+  showPromptModal({
+    title: `Override billing → ${next}`,
+    label: 'Reason (optional)',
+    placeholder: 'e.g. Duplicate, wrong target…',
+    confirmText: 'Override',
+    onConfirm: async (reason) => {
+      const res = await API.billingOverride(id, { billing_status: next, reason, overridden_by: 'Vishal' });
+      if (!res.success) throw new Error(res.error || 'Override failed');
+      showToast(`Marked ${next}`);
+      renderModule('leads');
+    },
+  });
 }
 
 window.setLeadsTab  = setLeadsTab;

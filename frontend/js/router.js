@@ -48,9 +48,8 @@ function navigate(id) {
   });
   document.getElementById('topbar-title').textContent = MODULE_TITLES[id] || id;
   document.getElementById('topbar-sub').textContent   = MODULE_SUBS[id]   || '';
-  // Reset module-level drilldown state when navigating via sidebar
+  // Preserve drilldown state across module switches; only reset on explicit back-nav
   if (typeof State !== 'undefined') {
-    State.viewingCampaign = null;
     // Always land on the active tab when clicking Campaigns in the sidebar
     if (id === 'campaigns') State.campaignsTab = 'active';
     else State.campaignsTab = State.campaignsTab || 'active';

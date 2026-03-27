@@ -338,19 +338,22 @@ async function createInvoice(e) {
   const res = await API.createInvoice(body);
   if (res.success) {
     document.getElementById('invoice-modal-overlay')?.remove();
+    showToast('Invoice created');
     renderModule('finance');
   } else {
-    alert('Error: ' + (res.error || 'Unknown error'));
+    showToast(res.error || 'Failed to create invoice', 'error');
   }
 }
 
 async function markInvoiceSent(id) {
   await API.updateInvoice(id, { status: 'sent' });
+  showToast('Invoice marked as sent');
   renderModule('finance');
 }
 
 async function markInvoicePaid(id) {
   await API.updateInvoice(id, { status: 'paid' });
+  showToast('Invoice marked as paid');
   renderModule('finance');
 }
 
@@ -365,7 +368,7 @@ async function downloadInvoicePDF(invoiceId) {
   const invoices = invRes.success ? invRes.data : [];
   const clients  = clRes.success ? clRes.data : [];
   const inv = invoices.find(i => i.id === invoiceId);
-  if (!inv) { alert('Invoice not found'); return; }
+  if (!inv) { showToast('Invoice not found', 'error'); return; }
 
   const client = clients.find(c => c.id === inv.client_id);
   const clientName = client?.name || inv.client_name || 'Client';
@@ -446,13 +449,22 @@ async function downloadInvoicePDF(invoiceId) {
 function editCost(index) {
   const costs = loadCosts();
   const c = costs[index];
-  const val = prompt(`${c.name} cost (number, 0 = usage-based):`, c.cost);
-  if (val === null) return;
-  const num = parseFloat(val);
-  if (isNaN(num) || num < 0) { alert('Enter a valid number (0 or more).'); return; }
-  costs[index].cost = num;
-  saveCosts(costs);
-  renderModule('finance');
+  showPromptModal({
+    title: `Edit cost — ${c.name}`,
+    label: 'Monthly cost ($) — enter 0 for usage-based',
+    placeholder: '0',
+    defaultValue: String(c.cost),
+    type: 'number',
+    confirmText: 'Save',
+    onConfirm: async (val) => {
+      const num = parseFloat(val);
+      if (isNaN(num) || num < 0) throw new Error('Enter a valid number (0 or more)');
+      costs[index].cost = num;
+      saveCosts(costs);
+      showToast(`${c.name} updated to $${num}${num === 0 ? ' (usage-based)' : '/mo'}`);
+      renderModule('finance');
+    },
+  });
 }
 
 window.setFinTab            = setFinTab;
