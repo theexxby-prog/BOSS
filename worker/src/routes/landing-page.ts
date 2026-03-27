@@ -78,6 +78,9 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       </div>
     </div>`).join('');
 
+  // Validate logo URL — only use if it's an actual HTTP URL
+  const hasLogo = logoUrl && (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -91,7 +94,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0c1220;
+      background: #0d1117;
       color: #e2e8f0;
       height: 100vh;
       overflow: hidden;
@@ -101,166 +104,205 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     /* ── Header ── */
     .topbar {
-      height: 52px; min-height: 52px;
-      background: rgba(255,255,255,0.03);
-      border-bottom: 1px solid rgba(255,255,255,0.07);
+      height: 56px; min-height: 56px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       display: flex; align-items: center;
-      padding: 0 40px; gap: 12px;
+      padding: 0 40px; gap: 10px;
       flex-shrink: 0;
     }
-    .topbar img { height: 28px; object-fit: contain; }
-    .topbar .brand { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); }
-    .topbar .asset-badge {
-      margin-left: auto;
-      font-size: 11px; font-weight: 500;
-      color: ${ba};
-      background: ${ba}18;
-      border: 1px solid ${ba}33;
-      padding: 3px 10px; border-radius: 20px;
+    .topbar img { height: 26px; object-fit: contain; max-width: 120px; }
+    .brand-initial {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: ${bc}; color: #fff;
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
     }
+    .topbar .brand { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); }
+    .topbar .asset-pill {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.45);
+    }
+    .topbar .asset-pill svg { opacity: 0.5; }
 
-    /* ── Main: two columns, full remaining height ── */
+    /* ── Main: two columns ── */
     .layout {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 420px;
-      gap: 0;
+      grid-template-columns: 1fr 400px;
       overflow: hidden;
-      position: relative;
     }
 
     /* ── Left panel ── */
     .left {
-      padding: 48px 52px 40px;
+      padding: 52px 56px 44px;
       display: flex; flex-direction: column;
       justify-content: center;
       overflow: hidden;
       position: relative;
     }
+    /* Vivid brand color glow */
     .left::before {
       content: '';
       position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse 70% 60% at 20% 50%, ${bc}22, transparent),
-        radial-gradient(ellipse 50% 40% at 80% 20%, ${ba}11, transparent);
+        radial-gradient(ellipse 90% 80% at -10% 60%, ${bc}55, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 100% 10%, ${ba}22, transparent 55%);
+      pointer-events: none;
+    }
+    /* Subtle dot grid */
+    .left::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
       pointer-events: none;
     }
     .left-content { position: relative; z-index: 1; }
 
+    /* Resource card — visual anchor at top of left panel */
+    .resource-pill {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 40px;
+      padding: 7px 14px 7px 10px;
+      margin-bottom: 28px;
+    }
+    .resource-pill-icon {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: ${ba}25; border: 1px solid ${ba}35;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .resource-pill-text { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.55); }
+    .resource-pill-text strong { color: ${ba}; font-weight: 600; }
+
     .hook {
       font-size: 12px; font-weight: 600;
       color: ${ba};
-      text-transform: uppercase; letter-spacing: 0.08em;
-      margin-bottom: 16px;
-    }
-    h1 {
-      font-size: clamp(24px, 2.8vw, 38px);
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: -0.5px;
-      color: #f1f5f9;
+      text-transform: uppercase; letter-spacing: 0.1em;
       margin-bottom: 14px;
     }
+    h1 {
+      font-size: clamp(26px, 3vw, 42px);
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: -0.6px;
+      color: #f8fafc;
+      margin-bottom: 16px;
+      max-width: 560px;
+    }
     .subheadline {
-      font-size: 15px;
-      color: rgba(255,255,255,0.5);
-      line-height: 1.6;
-      max-width: 480px;
+      font-size: 16px;
+      color: rgba(255,255,255,0.48);
+      line-height: 1.65;
+      max-width: 500px;
       margin-bottom: 36px;
     }
 
     /* ── Bullets ── */
-    .bullets { display: flex; flex-direction: column; gap: 20px; }
-    .bullet { display: flex; gap: 14px; align-items: flex-start; }
+    .bullets { display: flex; flex-direction: column; gap: 16px; }
+    .bullet { display: flex; gap: 12px; align-items: flex-start; }
     .bullet-icon {
-      width: 36px; height: 36px; flex-shrink: 0;
-      background: ${ba}15;
-      border: 1px solid ${ba}25;
-      border-radius: 10px;
+      width: 34px; height: 34px; flex-shrink: 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 9px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
+      font-size: 15px;
     }
-    .bullet-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 3px; }
-    .bullet-body  { font-size: 13px; color: rgba(255,255,255,0.42); line-height: 1.5; }
+    .bullet-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
+    .bullet-body  { font-size: 12px; color: rgba(255,255,255,0.36); line-height: 1.5; }
 
     /* Trust row */
     .trust-row {
       display: flex; gap: 20px; flex-wrap: wrap;
-      margin-top: 28px; padding-top: 20px;
+      margin-top: 32px; padding-top: 20px;
       border-top: 1px solid rgba(255,255,255,0.06);
     }
     .trust-item {
       display: flex; align-items: center; gap: 5px;
-      font-size: 12px; color: rgba(255,255,255,0.35);
+      font-size: 11px; color: rgba(255,255,255,0.3);
     }
-    .trust-dot { width: 5px; height: 5px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
+    .trust-dot { width: 4px; height: 4px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
 
     /* ── Right panel: form ── */
     .right {
-      background: rgba(255,255,255,0.025);
+      background: rgba(255,255,255,0.018);
       border-left: 1px solid rgba(255,255,255,0.06);
       display: flex; flex-direction: column;
       overflow-y: auto;
     }
-    .form-inner { padding: 36px 32px; flex: 1; }
+    .form-inner { padding: 32px 28px; flex: 1; }
 
-    .form-title { font-size: 17px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
-    .form-sub   { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 20px; }
+    /* Form header accent bar */
+    .form-header {
+      padding: 16px 20px;
+      background: ${bc}18;
+      border: 1px solid ${bc}25;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .form-header-label { font-size: 10px; font-weight: 600; color: ${ba}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+    .form-title { font-size: 15px; font-weight: 700; color: #f1f5f9; line-height: 1.3; }
 
-    .fg { margin-bottom: 12px; }
+    .fg { margin-bottom: 10px; }
     .fg label {
-      display: block; font-size: 11px; font-weight: 600;
-      color: rgba(255,255,255,0.4);
+      display: block; font-size: 10px; font-weight: 600;
+      color: rgba(255,255,255,0.35);
       text-transform: uppercase; letter-spacing: 0.5px;
       margin-bottom: 4px;
     }
     .fg input, .fg select {
-      width: 100%; padding: 10px 12px;
+      width: 100%; padding: 9px 11px;
       background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 7px;
       font-size: 13px; color: #f1f5f9;
       font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .fg input::placeholder { color: rgba(255,255,255,0.18); }
+    .fg input::placeholder { color: rgba(255,255,255,0.16); }
     .fg input:focus, .fg select:focus {
       outline: none;
       border-color: ${ba};
-      box-shadow: 0 0 0 3px ${ba}20;
+      box-shadow: 0 0 0 3px ${ba}18;
     }
-    .fg select option { background: #1a2235; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .fg select option { background: #161b27; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 14px 0; }
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 12px 0; }
     .custom-label {
-      font-size: 11px; font-weight: 600;
+      font-size: 10px; font-weight: 600;
       color: ${ba}; text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: 12px;
+      letter-spacing: 0.5px; margin-bottom: 10px;
     }
 
     .btn-submit {
       width: 100%; padding: 13px;
-      background: linear-gradient(135deg, ${bc}, ${ba});
+      background: ${bc};
       color: #fff; border: none; border-radius: 8px;
       font-size: 14px; font-weight: 700;
       cursor: pointer; font-family: inherit;
-      margin-top: 4px;
+      margin-top: 6px;
       transition: opacity 0.15s, transform 0.15s;
     }
-    .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
     .consent {
-      font-size: 11px; color: rgba(255,255,255,0.25);
+      font-size: 11px; color: rgba(255,255,255,0.2);
       margin-top: 10px; line-height: 1.5; text-align: center;
     }
 
     ${socialProof ? `.social-proof {
-      padding: 12px 32px;
+      padding: 12px 28px;
       border-top: 1px solid rgba(255,255,255,0.05);
-      font-size: 11px; color: rgba(255,255,255,0.3);
-      text-align: center;
+      font-size: 11px; color: rgba(255,255,255,0.28);
+      text-align: center; line-height: 1.5;
     }` : ''}
 
     /* ── Success state ── */
@@ -270,8 +312,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .success p  { font-size: 13px; color: rgba(255,255,255,0.45); margin-bottom: 24px; line-height: 1.6; }
     .dl-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px;
-      background: linear-gradient(135deg, ${bc}, ${ba});
+      padding: 12px 28px; background: ${bc};
       color: #fff; border-radius: 8px;
       text-decoration: none; font-weight: 700; font-size: 14px;
     }
@@ -280,9 +321,9 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     @media (max-width: 768px) {
       body { overflow: auto; height: auto; }
       .layout { grid-template-columns: 1fr; overflow: visible; }
-      .left { padding: 36px 24px 32px; }
+      .left { padding: 32px 24px 28px; }
       .right { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
-      .form-inner { padding: 28px 24px; }
+      .form-inner { padding: 24px 20px; }
       .row2 { grid-template-columns: 1fr; }
       .topbar { padding: 0 20px; }
     }
@@ -292,9 +333,14 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
   <!-- Header -->
   <div class="topbar">
-    ${logoUrl ? `<img src="${logoUrl}" alt="logo"/>` : ''}
+    ${hasLogo
+      ? `<img src="${logoUrl}" alt="${page.client_name || ''}" onerror="this.style.display='none'"/>`
+      : `<div class="brand-initial">${(page.client_name || 'B').charAt(0).toUpperCase()}</div>`}
     <div class="brand">${page.client_name || ''}</div>
-    <div class="asset-badge">📄 ${assetName}</div>
+    <div class="asset-pill">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ${assetName}
+    </div>
   </div>
 
   <!-- Main layout -->
@@ -303,6 +349,13 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     <!-- Left: copy -->
     <div class="left">
       <div class="left-content">
+
+        <!-- Resource visual anchor -->
+        <div class="resource-pill">
+          <div class="resource-pill-icon">📄</div>
+          <div class="resource-pill-text">Free resource &nbsp;·&nbsp; <strong>${assetName}</strong></div>
+        </div>
+
         ${hook ? `<div class="hook">${hook}</div>` : ''}
         <h1>${headline}</h1>
         <p class="subheadline">${subheadline}</p>
@@ -322,8 +375,10 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     <!-- Right: form -->
     <div class="right">
       <div class="form-inner">
-        <div class="form-title">Get Your Free Copy</div>
-        <div class="form-sub">${assetName}</div>
+        <div class="form-header">
+          <div class="form-header-label">Free Download</div>
+          <div class="form-title">${assetName}</div>
+        </div>
 
         <div id="form-section">
           <form id="lead-form">

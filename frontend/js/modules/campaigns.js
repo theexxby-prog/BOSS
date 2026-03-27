@@ -351,17 +351,34 @@ async function deployLandingPage(campaignId) {
   showGeneratingModal(c.asset_name || c.name);
 
   const genRes = await API.generatePage(campaignId);
+  removeGeneratingModal();
 
   if (!genRes.success) {
-    removeGeneratingModal();
-    showToast('Copy generation failed: ' + (genRes.error || 'Unknown error'), 'error');
-    // Fall back to basic deploy without AI copy
-    await _deployPageWithCopy(c, null);
+    showGenerateErrorModal(c, genRes.error || 'Unknown error');
     return;
   }
 
-  removeGeneratingModal();
   showCopyPreviewModal(c, genRes.data);
+}
+
+function showGenerateErrorModal(c, errorMsg) {
+  const existing = document.getElementById('gen-error-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'gen-error-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal-box" style="max-width:460px;text-align:center">
+    <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+    <div class="fw5 fs16 mb8">AI Copy Generation Failed</div>
+    <div class="fs13 mb12" style="color:var(--text-secondary);line-height:1.5">Claude couldn't generate copy for this campaign. The full error is shown below — use it to diagnose the problem before retrying.</div>
+    <div class="fs12 mb20" style="background:var(--bg-muted);border:1px solid var(--border);padding:10px 12px;border-radius:6px;color:var(--red-600);text-align:left;word-break:break-all;line-height:1.6;font-family:monospace">${errorMsg}</div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn btn-pri btn-sm" onclick="document.getElementById('gen-error-overlay').remove();deployLandingPage(${c.id})">↻ Retry</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('gen-error-overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
 }
 
 function showGeneratingModal(assetName) {
