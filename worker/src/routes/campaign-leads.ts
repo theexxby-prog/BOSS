@@ -176,11 +176,12 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       }
 
       const invoice_number = `INV-${campaignId}-${Date.now()}`;
+      const cpl = Math.round((totals.total! / totals.leads_count) * 100) / 100;
 
       const result = await dbRun(env.DB,
-        `INSERT INTO invoices (client_id, campaign_id, invoice_number, leads_count, total, status, created_at)
-         VALUES (?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP)`,
-        [campaign.client_id, campaignId, invoice_number, totals.leads_count, totals.total]
+        `INSERT INTO invoices (client_id, campaign_id, invoice_number, leads_count, cpl, total, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP)`,
+        [campaign.client_id, campaignId, invoice_number, totals.leads_count, cpl, totals.total]
       );
       const invoiceId = result.lastRowId;
 
