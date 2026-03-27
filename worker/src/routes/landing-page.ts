@@ -94,285 +94,175 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0d1117;
-      color: #e2e8f0;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      background: #111827;
+      height: 100vh; overflow: hidden;
+      display: flex; flex-direction: column;
     }
 
-    /* ── Header ── */
+    /* ── Topbar: solid brand color ── */
     .topbar {
-      height: 56px; min-height: 56px;
-      background: rgba(255,255,255,0.02);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      height: 52px; min-height: 52px;
+      background: ${bc};
       display: flex; align-items: center;
-      padding: 0 40px; gap: 10px;
-      flex-shrink: 0;
+      padding: 0 36px; gap: 10px; flex-shrink: 0;
     }
-    .topbar img { height: 26px; object-fit: contain; max-width: 120px; }
+    .topbar img { height: 24px; object-fit: contain; max-width: 100px; filter: brightness(10); }
     .brand-initial {
-      width: 28px; height: 28px; border-radius: 6px;
-      background: ${bc}; color: #fff;
-      font-size: 13px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      width: 26px; height: 26px; border-radius: 5px;
+      background: rgba(255,255,255,0.22); color: #fff;
+      font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .topbar .brand { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); }
+    .topbar .brand { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.95); }
     .topbar .asset-pill {
-      margin-left: auto;
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.45);
-    }
-    .topbar .asset-pill svg { opacity: 0.5; }
-
-    /* ── Main: two columns ── */
-    .layout {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 400px;
-      min-height: 0;
+      margin-left: auto; display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: rgba(255,255,255,0.65);
     }
 
-    /* ── Left panel: two zones stacked ── */
+    /* ── Layout ── */
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
+
+    /* ── Left panel ── */
     .left {
-      display: grid;
-      grid-template-rows: 1fr 1fr;
-      overflow: hidden;
-      position: relative;
+      display: grid; grid-template-rows: 1fr 1fr;
+      overflow: hidden; position: relative; background: #111827;
     }
-
-    /* Shared background glow */
     .left::before {
-      content: '';
-      position: absolute; inset: 0;
+      content: ''; position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse 100% 70% at -5% 30%, ${bc}60, transparent 55%),
-        radial-gradient(ellipse 70% 60% at 110% 80%, ${ba}28, transparent 55%);
-      pointer-events: none;
-      z-index: 0;
+        radial-gradient(ellipse 80% 60% at -5% 25%, ${bc}55, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 105% 85%, ${ba}22, transparent 55%);
+      pointer-events: none; z-index: 0;
     }
     .left::after {
-      content: '';
-      position: absolute; inset: 0;
-      background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
-      background-size: 26px 26px;
-      pointer-events: none;
-      z-index: 0;
+      content: ''; position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px; pointer-events: none; z-index: 0;
     }
 
-    /* ── Zone 1: Document visual ── */
+    /* Zone 1: Document visual */
     .doc-zone {
-      display: flex;
-      align-items: center;
-      padding: 40px 52px 28px;
-      position: relative;
-      z-index: 1;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center;
+      padding: 36px 52px 24px;
+      position: relative; z-index: 1;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
-    /* The document card */
-    .doc-card {
-      width: 100%;
-      max-width: 520px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 14px;
-      overflow: hidden;
+    /* Book-cover style document */
+    .doc-cover {
+      display: flex; width: 100%; max-width: 540px; height: 148px;
+      border-radius: 12px; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
     }
-    .doc-card-header {
-      background: ${bc};
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .doc-spine {
+      width: 38%; background: ${bc};
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 16px 18px;
     }
-    .doc-card-client {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9);
+    .doc-spine-client { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.05em; }
+    .doc-spine-year { font-size: 32px; font-weight: 700; color: rgba(255,255,255,0.12); line-height: 1; }
+    .doc-body {
+      flex: 1; background: rgba(255,255,255,0.055);
+      border-left: 1px solid rgba(255,255,255,0.07);
+      padding: 16px 18px;
+      display: flex; flex-direction: column; justify-content: space-between;
     }
-    .doc-card-client-dot {
-      width: 22px; height: 22px; border-radius: 6px;
-      background: rgba(255,255,255,0.25);
-      font-size: 11px; font-weight: 700; color: #fff;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .doc-card-type {
-      font-size: 10px; font-weight: 600;
-      background: rgba(255,255,255,0.18);
-      color: rgba(255,255,255,0.9);
-      padding: 2px 8px; border-radius: 20px;
-      text-transform: uppercase; letter-spacing: 0.06em;
-    }
-    .doc-card-body {
-      padding: 18px 20px 20px;
-    }
-    .doc-card-name {
-      font-size: 17px; font-weight: 700;
-      color: #f1f5f9; line-height: 1.3;
-      margin-bottom: 14px;
-    }
-    /* Decorative page-content lines */
-    .doc-card-lines { display: flex; flex-direction: column; gap: 6px; }
-    .dcl { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.07); }
-    .dcl-short { width: 55%; }
-    .dcl-med   { width: 80%; }
+    .doc-body-type { font-size: 10px; font-weight: 600; color: ${ba}; text-transform: uppercase; letter-spacing: 0.08em; }
+    .doc-body-title { font-size: 14px; font-weight: 700; color: #f1f5f9; line-height: 1.3; }
+    .doc-body-lines { display: flex; flex-direction: column; gap: 5px; }
+    .dcl { height: 2px; border-radius: 2px; background: rgba(255,255,255,0.08); }
 
-    /* Hook quote under the doc card */
     .hook-quote {
-      margin-top: 16px;
-      max-width: 520px;
-      font-size: 12px; font-weight: 500;
-      color: rgba(255,255,255,0.38);
-      line-height: 1.6;
-      font-style: italic;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      margin-top: 14px; max-width: 540px;
+      font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.4);
+      line-height: 1.65; font-style: italic;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
 
-    /* ── Zone 2: Copy ── */
+    /* Zone 2: Copy */
     .copy-zone {
-      padding: 28px 52px 36px;
-      overflow-y: auto;
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      padding: 24px 52px 32px; overflow-y: auto;
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; justify-content: center;
+      color: #e2e8f0;
     }
-
     h1 {
-      font-size: clamp(22px, 2.6vw, 36px);
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: -0.5px;
-      color: #f8fafc;
-      margin-bottom: 10px;
-      max-width: 560px;
+      font-size: clamp(24px, 2.8vw, 38px); font-weight: 700;
+      line-height: 1.18; letter-spacing: -0.5px;
+      color: #f8fafc; margin-bottom: 10px; max-width: 540px;
     }
     .subheadline {
-      font-size: 14px;
-      color: rgba(255,255,255,0.45);
-      line-height: 1.6;
-      max-width: 500px;
-      margin-bottom: 20px;
+      font-size: 14px; color: rgba(255,255,255,0.48);
+      line-height: 1.65; max-width: 480px; margin-bottom: 18px;
     }
-
-    /* ── Bullets ── */
-    .bullets { display: flex; flex-direction: column; gap: 12px; }
+    .bullets { display: flex; flex-direction: column; gap: 10px; }
     .bullet { display: flex; gap: 10px; align-items: flex-start; }
     .bullet-icon {
-      width: 30px; height: 30px; flex-shrink: 0;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px;
+      width: 28px; height: 28px; flex-shrink: 0;
+      background: ${bc}1a; border: 1px solid ${bc}30;
+      border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px;
     }
     .bullet-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.88); margin-bottom: 1px; }
-    .bullet-body  { font-size: 12px; color: rgba(255,255,255,0.33); line-height: 1.45; }
-
-    /* Trust row */
+    .bullet-body  { font-size: 12px; color: rgba(255,255,255,0.35); line-height: 1.45; }
     .trust-row {
-      display: flex; gap: 18px; flex-wrap: wrap;
-      margin-top: 18px; padding-top: 14px;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex; gap: 16px; flex-wrap: wrap;
+      margin-top: 16px; padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
     }
-    .trust-item {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 11px; color: rgba(255,255,255,0.28);
-    }
+    .trust-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: rgba(255,255,255,0.28); }
     .trust-dot { width: 4px; height: 4px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
 
-    /* ── Right panel: form ── */
+    /* ── Right panel: WHITE ── */
     .right {
-      background: rgba(255,255,255,0.018);
-      border-left: 1px solid rgba(255,255,255,0.06);
-      display: flex; flex-direction: column;
-      overflow-y: auto;
+      background: #ffffff;
+      border-left: 3px solid ${bc};
+      display: flex; flex-direction: column; overflow-y: auto;
     }
-    .form-inner { padding: 32px 28px; flex: 1; }
-
-    /* Form header accent bar */
+    .form-inner { padding: 24px 22px; flex: 1; }
     .form-header {
-      padding: 16px 20px;
-      background: ${bc}18;
-      border: 1px solid ${bc}25;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      background: ${bc}0d; border: 1px solid ${bc}22;
+      border-radius: 9px; padding: 13px 15px; margin-bottom: 16px;
     }
-    .form-header-label { font-size: 10px; font-weight: 600; color: ${ba}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
-    .form-title { font-size: 15px; font-weight: 700; color: #f1f5f9; line-height: 1.3; }
+    .form-header-label { font-size: 10px; font-weight: 600; color: ${bc}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+    .form-title { font-size: 14px; font-weight: 700; color: #111827; line-height: 1.3; }
 
-    .fg { margin-bottom: 10px; }
-    .fg label {
-      display: block; font-size: 10px; font-weight: 600;
-      color: rgba(255,255,255,0.35);
-      text-transform: uppercase; letter-spacing: 0.5px;
-      margin-bottom: 4px;
-    }
+    .fg { margin-bottom: 9px; }
+    .fg label { display: block; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
     .fg input, .fg select {
-      width: 100%; padding: 9px 11px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 7px;
-      font-size: 13px; color: #f1f5f9;
-      font-family: inherit;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%; padding: 8px 10px;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+      border-radius: 6px; font-size: 13px; color: #111827;
+      font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .fg input::placeholder { color: rgba(255,255,255,0.16); }
-    .fg input:focus, .fg select:focus {
-      outline: none;
-      border-color: ${ba};
-      box-shadow: 0 0 0 3px ${ba}18;
-    }
-    .fg select option { background: #161b27; }
+    .fg input::placeholder { color: #9ca3af; }
+    .fg input:focus, .fg select:focus { outline: none; border-color: ${bc}; box-shadow: 0 0 0 3px ${bc}18; }
+    .fg select option { background: #fff; color: #111827; }
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 12px 0; }
-    .custom-label {
-      font-size: 10px; font-weight: 600;
-      color: ${ba}; text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: 10px;
-    }
+    .divider { border: none; border-top: 1px solid #f3f4f6; margin: 10px 0; }
+    .custom-label { font-size: 10px; font-weight: 600; color: ${bc}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
 
     .btn-submit {
-      width: 100%; padding: 13px;
-      background: ${bc};
+      width: 100%; padding: 12px; background: ${bc};
       color: #fff; border: none; border-radius: 8px;
-      font-size: 14px; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      margin-top: 6px;
-      transition: opacity 0.15s, transform 0.15s;
+      font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+      margin-top: 4px; transition: opacity 0.15s, transform 0.15s;
     }
     .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
     .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .consent { font-size: 11px; color: #9ca3af; margin-top: 8px; line-height: 1.5; text-align: center; }
 
-    .consent {
-      font-size: 11px; color: rgba(255,255,255,0.2);
-      margin-top: 10px; line-height: 1.5; text-align: center;
-    }
-
-    ${socialProof ? `.social-proof {
-      padding: 12px 28px;
-      border-top: 1px solid rgba(255,255,255,0.05);
-      font-size: 11px; color: rgba(255,255,255,0.28);
-      text-align: center; line-height: 1.5;
-    }` : ''}
+    ${socialProof ? `.social-proof { padding: 10px 22px; border-top: 1px solid #f3f4f6; font-size: 11px; color: #9ca3af; text-align: center; line-height: 1.5; }` : ''}
 
     /* ── Success state ── */
-    .success { display: none; text-align: center; padding: 48px 24px; }
-    .success-icon { font-size: 48px; margin-bottom: 16px; }
-    .success h2 { font-size: 20px; font-weight: 700; color: #10b981; margin-bottom: 8px; }
-    .success p  { font-size: 13px; color: rgba(255,255,255,0.45); margin-bottom: 24px; line-height: 1.6; }
+    .success { display: none; text-align: center; padding: 40px 20px; }
+    .success-icon { font-size: 40px; margin-bottom: 12px; }
+    .success h2 { font-size: 18px; font-weight: 700; color: #059669; margin-bottom: 6px; }
+    .success p  { font-size: 13px; color: #6b7280; margin-bottom: 20px; line-height: 1.6; }
     .dl-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px; background: ${bc};
-      color: #fff; border-radius: 8px;
-      text-decoration: none; font-weight: 700; font-size: 14px;
+      padding: 11px 24px; background: ${bc};
+      color: #fff; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px;
     }
 
     /* ── Mobile ── */
@@ -380,12 +270,13 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       body { overflow: auto; height: auto; }
       .layout { grid-template-columns: 1fr; }
       .left { grid-template-rows: auto auto; overflow: visible; }
-      .doc-zone { padding: 28px 24px 20px; }
-      .copy-zone { padding: 20px 24px 28px; }
-      .right { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
-      .form-inner { padding: 24px 20px; }
+      .doc-zone { padding: 24px 20px 16px; }
+      .doc-cover { height: 110px; }
+      .copy-zone { padding: 16px 20px 24px; }
+      .right { border-left: none; border-top: 3px solid ${bc}; }
+      .form-inner { padding: 20px 16px; }
       .row2 { grid-template-columns: 1fr; }
-      .topbar { padding: 0 20px; }
+      .topbar { padding: 0 16px; }
     }
   </style>
 </head>
@@ -411,26 +302,23 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
       <!-- Zone 1: Document visual -->
       <div class="doc-zone">
-        <div>
-          <div class="doc-card">
-            <div class="doc-card-header">
-              <div class="doc-card-client">
-                <div class="doc-card-client-dot">${(page.client_name || 'B').charAt(0).toUpperCase()}</div>
-                ${page.client_name || ''}
-              </div>
-              <div class="doc-card-type">Free Download</div>
+        <div style="width:100%">
+          <div class="doc-cover">
+            <div class="doc-spine">
+              <div class="doc-spine-client">${page.client_name || ''}</div>
+              <div class="doc-spine-year">2026</div>
             </div>
-            <div class="doc-card-body">
-              <div class="doc-card-name">${assetName}</div>
-              <div class="doc-card-lines">
-                <div class="dcl dcl-med"></div>
-                <div class="dcl dcl-short"></div>
-                <div class="dcl dcl-med"></div>
-                <div class="dcl" style="width:40%"></div>
+            <div class="doc-body">
+              <div class="doc-body-type">Free Download</div>
+              <div class="doc-body-title">${assetName}</div>
+              <div class="doc-body-lines">
+                <div class="dcl" style="width:90%"></div>
+                <div class="dcl" style="width:70%"></div>
+                <div class="dcl" style="width:80%"></div>
               </div>
             </div>
           </div>
-          ${hook ? `<div class="hook-quote">${hook}</div>` : ''}
+          ${hook ? `<div class="hook-quote">"${hook}"</div>` : ''}
         </div>
       </div>
 
