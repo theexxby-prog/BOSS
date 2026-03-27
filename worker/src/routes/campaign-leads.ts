@@ -133,6 +133,57 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       }, 200, origin);
     }
 
+    // POST /api/campaign-leads/:id/billing
+    if (
+      request.method === 'POST' &&
+      segments[1] === 'campaign-leads' &&
+      segments[3] === 'billing'
+    ) {
+      const campaignLeadId = Number(segments[2]);
+      if (!campaignLeadId || isNaN(campaignLeadId)) {
+        return jsonResponse({ success: false, error: 'Invalid campaign_lead id' }, 400, origin);
+      }
+
+      const body = await request.json() as Record<string, unknown>;
+      const { billing_status, reason, overridden_by } = body;
+
+      if (!billing_status || !['billable', 'non-billable'].includes(billing_status as string)) {
+        return jsonResponse({ success: false, error: 'billing_status must be billable or non-billable' }, 400, origin);
+      }
+
+      const row = await dbFirst<{
+        id: number; status: string; invoice_id: number | null;
+      }>(env.DB, 'SELECT id, status, invoice_id FROM campaign_leads WHERE id = ?', [campaignLeadId]);
+      if (!row) return jsonResponse({ success: false, error: 'Campaign lead not found' }, 404, origin);
+
+      if (row.status === 'pending' || row.status === 'rejected') {
+        return jsonResponse({ success: false, error: 'Lead cannot be billed in its current status' }, 409, origin);
+      }
+      if (row.invoice_id !== null) {
+        return jsonResponse({ success: false, error: 'Cannot modify billing after invoice has been issued' }, 409, origin);
+      }
+
+      await dbRun(env.DB,
+        `UPDATE campaign_leads
+         SET billing_status = ?,
+             billing_override_reason = ?,
+             billing_overridden_by = ?,
+             billing_overridden_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [billing_status, reason ?? null, overridden_by ?? null, campaignLeadId]
+      );
+
+      return jsonResponse({
+        success: true,
+        data: {
+          campaign_lead_id: campaignLeadId,
+          billing_status,
+          billing_override_reason: reason ?? null,
+          billing_overridden_by: overridden_by ?? null,
+        },
+      }, 200, origin);
+    }
+
     // POST /api/campaign-leads/:id/qa
     const qaMatch = /^\/api\/campaign-leads\/(\d+)\/qa$/.test(url.pathname);
     if (request.method === 'POST' && qaMatch) {
