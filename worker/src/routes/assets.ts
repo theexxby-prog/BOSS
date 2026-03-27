@@ -1,5 +1,5 @@
 import { jsonResponse } from '../cors';
-import { dbAll, dbFirst, dbRun, touchUpdated } from '../db';
+import { dbAll, dbFirst, dbRun } from '../db';
 import type { Env, RouteHandler } from '../types';
 
 export const assetsRouter: RouteHandler = async (request, env) => {
@@ -10,8 +10,9 @@ export const assetsRouter: RouteHandler = async (request, env) => {
 
   if (request.method === 'GET' && !id) {
     const clientId = url.searchParams.get('client_id');
-    const where    = clientId ? `WHERE client_id = ${parseInt(clientId)}` : '';
-    const rows     = await dbAll(env.DB, `SELECT * FROM assets ${where} ORDER BY created_at DESC`);
+    const rows = clientId
+      ? await dbAll(env.DB, `SELECT * FROM assets WHERE client_id = ? ORDER BY created_at DESC`, [parseInt(clientId)])
+      : await dbAll(env.DB, `SELECT * FROM assets ORDER BY created_at DESC`);
     return jsonResponse({ success: true, data: rows }, 200, origin);
   }
 
@@ -24,24 +25,29 @@ export const assetsRouter: RouteHandler = async (request, env) => {
   if (request.method === 'POST') {
     const b: any = await request.json();
     const result = await dbRun(env.DB,
-      `INSERT INTO assets (client_id,name,type,description,file_url,thumbnail_url,status)
-       VALUES (?,?,?,?,?,?,?)`,
-      [b.client_id??null, b.name, b.type, b.description??null, b.file_url??null, b.thumbnail_url??null, b.status??'active']
+      `INSERT INTO assets (client_id, name, type, description, file_url, thumbnail_url, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [b.client_id ?? null, b.name, b.type, b.description ?? null,
+       b.file_url ?? null, b.thumbnail_url ?? null, b.status ?? 'active']
     );
-    return jsonResponse({ success: true, id: result.meta.last_row_id }, 201, origin);
+    return jsonResponse({ success: true, id: result.lastRowId }, 201, origin);
   }
 
   if (request.method === 'PUT' && id) {
     const b: any = await request.json();
     await dbRun(env.DB,
-      `UPDATE assets SET name=?,type=?,description=?,file_url=?,thumbnail_url=?,status=?,${touchUpdated()} WHERE id=?`,
-      [b.name, b.type, b.description??null, b.file_url??null, b.thumbnail_url??null, b.status??'active', String(id)]
+      `UPDATE assets
+       SET name=?, type=?, description=?, file_url=?, thumbnail_url=?, status=?,
+           updated_at = datetime('now')
+       WHERE id = ?`,
+      [b.name, b.type, b.description ?? null, b.file_url ?? null,
+       b.thumbnail_url ?? null, b.status ?? 'active', String(id)]
     );
     return jsonResponse({ success: true }, 200, origin);
   }
 
   if (request.method === 'DELETE' && id) {
-    await dbRun(env.DB, `DELETE FROM assets WHERE id=?`, [String(id)]);
+    await dbRun(env.DB, `DELETE FROM assets WHERE id = ?`, [String(id)]);
     return jsonResponse({ success: true }, 200, origin);
   }
 
