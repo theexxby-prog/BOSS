@@ -132,100 +132,158 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 400px;
-      overflow: hidden;
+      min-height: 0;
     }
 
-    /* ── Left panel ── */
+    /* ── Left panel: two zones stacked ── */
     .left {
-      padding: 52px 56px 44px;
-      display: flex; flex-direction: column;
-      justify-content: center;
+      display: grid;
+      grid-template-rows: 1fr 1fr;
       overflow: hidden;
       position: relative;
     }
-    /* Vivid brand color glow */
+
+    /* Shared background glow */
     .left::before {
       content: '';
       position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse 90% 80% at -10% 60%, ${bc}55, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 100% 10%, ${ba}22, transparent 55%);
+        radial-gradient(ellipse 100% 70% at -5% 30%, ${bc}60, transparent 55%),
+        radial-gradient(ellipse 70% 60% at 110% 80%, ${ba}28, transparent 55%);
       pointer-events: none;
+      z-index: 0;
     }
-    /* Subtle dot grid */
     .left::after {
       content: '';
       position: absolute; inset: 0;
-      background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
-      background-size: 28px 28px;
+      background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 26px 26px;
       pointer-events: none;
+      z-index: 0;
     }
-    .left-content { position: relative; z-index: 1; }
 
-    /* Resource card — visual anchor at top of left panel */
-    .resource-pill {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 40px;
-      padding: 7px 14px 7px 10px;
-      margin-bottom: 28px;
+    /* ── Zone 1: Document visual ── */
+    .doc-zone {
+      display: flex;
+      align-items: center;
+      padding: 40px 52px 28px;
+      position: relative;
+      z-index: 1;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
     }
-    .resource-pill-icon {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: ${ba}25; border: 1px solid ${ba}35;
+
+    /* The document card */
+    .doc-card {
+      width: 100%;
+      max-width: 520px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .doc-card-header {
+      background: ${bc};
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .doc-card-client {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9);
+    }
+    .doc-card-client-dot {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: rgba(255,255,255,0.25);
+      font-size: 11px; font-weight: 700; color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px;
     }
-    .resource-pill-text { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.55); }
-    .resource-pill-text strong { color: ${ba}; font-weight: 600; }
-
-    .hook {
-      font-size: 12px; font-weight: 600;
-      color: ${ba};
-      text-transform: uppercase; letter-spacing: 0.1em;
+    .doc-card-type {
+      font-size: 10px; font-weight: 600;
+      background: rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.9);
+      padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .doc-card-body {
+      padding: 18px 20px 20px;
+    }
+    .doc-card-name {
+      font-size: 17px; font-weight: 700;
+      color: #f1f5f9; line-height: 1.3;
       margin-bottom: 14px;
     }
+    /* Decorative page-content lines */
+    .doc-card-lines { display: flex; flex-direction: column; gap: 6px; }
+    .dcl { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.07); }
+    .dcl-short { width: 55%; }
+    .dcl-med   { width: 80%; }
+
+    /* Hook quote under the doc card */
+    .hook-quote {
+      margin-top: 16px;
+      max-width: 520px;
+      font-size: 12px; font-weight: 500;
+      color: rgba(255,255,255,0.38);
+      line-height: 1.6;
+      font-style: italic;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ── Zone 2: Copy ── */
+    .copy-zone {
+      padding: 28px 52px 36px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
     h1 {
-      font-size: clamp(26px, 3vw, 42px);
+      font-size: clamp(22px, 2.6vw, 36px);
       font-weight: 700;
-      line-height: 1.18;
-      letter-spacing: -0.6px;
+      line-height: 1.2;
+      letter-spacing: -0.5px;
       color: #f8fafc;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
       max-width: 560px;
     }
     .subheadline {
-      font-size: 16px;
-      color: rgba(255,255,255,0.48);
-      line-height: 1.65;
+      font-size: 14px;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.6;
       max-width: 500px;
-      margin-bottom: 36px;
+      margin-bottom: 20px;
     }
 
     /* ── Bullets ── */
-    .bullets { display: flex; flex-direction: column; gap: 16px; }
-    .bullet { display: flex; gap: 12px; align-items: flex-start; }
+    .bullets { display: flex; flex-direction: column; gap: 12px; }
+    .bullet { display: flex; gap: 10px; align-items: flex-start; }
     .bullet-icon {
-      width: 34px; height: 34px; flex-shrink: 0;
+      width: 30px; height: 30px; flex-shrink: 0;
       background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px;
+      font-size: 13px;
     }
-    .bullet-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
-    .bullet-body  { font-size: 12px; color: rgba(255,255,255,0.36); line-height: 1.5; }
+    .bullet-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.88); margin-bottom: 1px; }
+    .bullet-body  { font-size: 12px; color: rgba(255,255,255,0.33); line-height: 1.45; }
 
     /* Trust row */
     .trust-row {
-      display: flex; gap: 20px; flex-wrap: wrap;
-      margin-top: 32px; padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; gap: 18px; flex-wrap: wrap;
+      margin-top: 18px; padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.05);
     }
     .trust-item {
       display: flex; align-items: center; gap: 5px;
-      font-size: 11px; color: rgba(255,255,255,0.3);
+      font-size: 11px; color: rgba(255,255,255,0.28);
     }
     .trust-dot { width: 4px; height: 4px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
 
@@ -320,8 +378,10 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     /* ── Mobile ── */
     @media (max-width: 768px) {
       body { overflow: auto; height: auto; }
-      .layout { grid-template-columns: 1fr; overflow: visible; }
-      .left { padding: 32px 24px 28px; }
+      .layout { grid-template-columns: 1fr; }
+      .left { grid-template-rows: auto auto; overflow: visible; }
+      .doc-zone { padding: 28px 24px 20px; }
+      .copy-zone { padding: 20px 24px 28px; }
       .right { border-left: none; border-top: 1px solid rgba(255,255,255,0.06); }
       .form-inner { padding: 24px 20px; }
       .row2 { grid-template-columns: 1fr; }
@@ -346,17 +406,36 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   <!-- Main layout -->
   <div class="layout">
 
-    <!-- Left: copy -->
+    <!-- Left: two zones -->
     <div class="left">
-      <div class="left-content">
 
-        <!-- Resource visual anchor -->
-        <div class="resource-pill">
-          <div class="resource-pill-icon">📄</div>
-          <div class="resource-pill-text">Free resource &nbsp;·&nbsp; <strong>${assetName}</strong></div>
+      <!-- Zone 1: Document visual -->
+      <div class="doc-zone">
+        <div>
+          <div class="doc-card">
+            <div class="doc-card-header">
+              <div class="doc-card-client">
+                <div class="doc-card-client-dot">${(page.client_name || 'B').charAt(0).toUpperCase()}</div>
+                ${page.client_name || ''}
+              </div>
+              <div class="doc-card-type">Free Download</div>
+            </div>
+            <div class="doc-card-body">
+              <div class="doc-card-name">${assetName}</div>
+              <div class="doc-card-lines">
+                <div class="dcl dcl-med"></div>
+                <div class="dcl dcl-short"></div>
+                <div class="dcl dcl-med"></div>
+                <div class="dcl" style="width:40%"></div>
+              </div>
+            </div>
+          </div>
+          ${hook ? `<div class="hook-quote">${hook}</div>` : ''}
         </div>
+      </div>
 
-        ${hook ? `<div class="hook">${hook}</div>` : ''}
+      <!-- Zone 2: Copy -->
+      <div class="copy-zone">
         <h1>${headline}</h1>
         <p class="subheadline">${subheadline}</p>
 
@@ -370,6 +449,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
           <div class="trust-item"><div class="trust-dot"></div> Unsubscribe anytime</div>
         </div>
       </div>
+
     </div>
 
     <!-- Right: form -->
