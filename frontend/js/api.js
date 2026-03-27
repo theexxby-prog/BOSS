@@ -104,6 +104,9 @@ const API = {
 
   // ICP Scoring
   scoreLead:      (id)        => apiFetch(`/api/leads/${id}/score`, { method: 'POST' }),
+
+  // Pipeline alerts
+  getAlerts:      ()          => apiFetch('/api/alerts'),
 };
 
 window.API = API;

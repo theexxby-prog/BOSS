@@ -10,8 +10,12 @@ const revenueData = [
 ];
 
 async function renderOverview() {
-  const cRes = await API.getCampaigns();
+  const [cRes, alertsRes] = await Promise.all([
+    API.getCampaigns(),
+    API.getAlerts(),
+  ]);
   const campaigns = cRes.success ? cRes.data : [];
+  const alerts    = alertsRes.success ? alertsRes.data.alerts : [];
   const pendingRequests = campaigns.filter(c => c.status === 'draft').length;
 
   return `<div class="fade">
@@ -69,10 +73,24 @@ async function renderOverview() {
     </div>
 
     <div class="card">
-      <div class="sec-title mb12">🔔 Active Alerts</div>
-      <div class="alert a-yel">⚠️<div><strong>TechTarget Campaign behind pacing</strong> — 187/300 leads (62%). Needs 113 more by Apr 5. Action: increase daily send volume.</div></div>
-      <div class="alert a-grn">✅<div><strong>DemandScience Q2 CloudSec</strong> — 342/500 delivered. 91% acceptance rate. On track for Mar 30.</div></div>
-      <div class="alert a-blu">📅<div><strong>Apollo.io renewal</strong> in 14 days ($99). Review usage before renewing — at 68% of monthly limit.</div></div>
+      <div class="sec-hdr mb12">
+        <div><div class="sec-title">🔔 Active Alerts</div><div class="sec-sub">${alerts.length} issue${alerts.length !== 1 ? 's' : ''} detected</div></div>
+      </div>
+      ${alerts.length === 0
+        ? `<div class="alert a-grn">✅ <div>No alerts — all campaigns healthy.</div></div>`
+        : alerts.map(a => {
+            if (a.type === 'no_delivery') {
+              return `<div class="alert a-red">❌ <div><strong>${a.campaign_name}</strong> — no leads delivered yet. ${a.total_leads} lead${a.total_leads !== 1 ? 's' : ''} in pipeline.</div></div>`;
+            }
+            if (a.type === 'low_acceptance') {
+              return `<div class="alert a-yel">⚠️ <div><strong>${a.campaign_name}</strong> — low acceptance rate: ${a.acceptance_rate}% (${a.accepted} accepted / ${a.delivered} delivered).</div></div>`;
+            }
+            if (a.type === 'behind_pacing') {
+              return `<div class="alert a-yel">📉 <div><strong>${a.campaign_name}</strong> — behind pacing: ${a.actual} delivered, ${a.expected} expected (${a.progress_pct}% through campaign).</div></div>`;
+            }
+            return '';
+          }).join('')
+      }
     </div>
   </div>`;
 }
