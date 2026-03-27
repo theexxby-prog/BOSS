@@ -19,6 +19,7 @@ import { jobCardsRouter }      from './routes/job-cards';
 import { landingPageRenderer } from './routes/landing-page';
 import { billingRouter }       from './routes/billing';
 import { webhooksRouter }      from './routes/webhooks';
+import { campaignLeadsRouter } from './routes/campaign-leads';
 import { dbFirst, dbAll }      from './db';
 
 export default {
@@ -68,6 +69,8 @@ export default {
 
     // ── Route dispatch ───────────────────────────────────────────────────────
     if (path.startsWith('/api/clients'))     return clientsRouter(request, env, origin);
+    if (path.startsWith('/api/campaigns/') && path.endsWith('/leads') && request.method === 'POST')
+      return campaignLeadsRouter(request, env, origin);
     if (path.startsWith('/api/campaigns'))   return campaignsRouter(request, env, origin);
     if (path.startsWith('/api/leads'))       return leadsRouter(request, env, origin);
     if (path.startsWith('/api/deliveries'))  return deliveriesRouter(request, env, origin);
