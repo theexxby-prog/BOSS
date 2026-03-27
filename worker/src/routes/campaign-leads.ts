@@ -11,8 +11,8 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
   const campaignId = segments[2] ? parseInt(segments[2]) : null;
 
   try {
-    // POST /api/campaigns/:id/leads
-    if (request.method === 'POST' && campaignId) {
+    // POST /api/campaigns/:id/leads  (segments: api, campaigns, :id, leads)
+    if (request.method === 'POST' && segments[1] === 'campaigns' && segments[3] === 'leads' && campaignId) {
       const body = await request.json() as Record<string, unknown>;
       const { name, email: rawEmail, source } = body;
 
@@ -145,6 +145,7 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
 
     return jsonResponse({ success: false, error: 'Not found' }, 404, origin);
   } catch (err) {
+    console.error('campaignLeadsRouter error:', err);
     return jsonResponse({ success: false, error: 'Internal server error' }, 500, origin);
   }
 }
