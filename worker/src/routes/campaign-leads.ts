@@ -415,10 +415,21 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       // Idempotent: return existing invoice if already generated
       const existing = await dbFirst<{
         id: number; invoice_number: string; campaign_id: number;
-        client_id: number; leads_count: number; total: number; status: string;
+        client_id: number; leads_count: number; total: number;
+        due_date: string | null; status: string;
       }>(env.DB, 'SELECT * FROM invoices WHERE campaign_id = ?', [campaignId]);
       if (existing) {
-        return jsonResponse({ success: true, data: existing }, 200, origin);
+        return jsonResponse({ success: true, data: {
+          invoice_id: existing.id,
+          invoice_number: existing.invoice_number,
+          campaign_id: existing.campaign_id,
+          client_id: existing.client_id,
+          leads_count: existing.leads_count,
+          total: existing.total,
+          due_date: existing.due_date ?? null,
+          overdue: false,
+          status: existing.status,
+        }}, 200, origin);
       }
 
       // Aggregate billable leads in SQL — never in JS
