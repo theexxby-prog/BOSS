@@ -188,6 +188,54 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       }, 201, origin);
     }
 
+    // POST /api/campaign-leads/:id/accept
+    if (
+      request.method === 'POST' &&
+      segments[1] === 'campaign-leads' &&
+      segments[3] === 'accept'
+    ) {
+      const campaignLeadId = Number(segments[2]);
+      if (!campaignLeadId || isNaN(campaignLeadId)) {
+        return jsonResponse({ success: false, error: 'Invalid campaign_lead id' }, 400, origin);
+      }
+
+      const body = await request.json() as Record<string, unknown>;
+      const price = Number(body.price);
+      if (!body.price || isNaN(price) || price <= 0) {
+        return jsonResponse({ success: false, error: 'price is required and must be a number greater than 0' }, 400, origin);
+      }
+
+      const row = await dbFirst<{ id: number; status: string }>(
+        env.DB, 'SELECT id, status FROM campaign_leads WHERE id = ?', [campaignLeadId]
+      );
+      if (!row) return jsonResponse({ success: false, error: 'Campaign lead not found' }, 404, origin);
+
+      if (row.status === 'accepted' || row.status === 'rejected') {
+        return jsonResponse({ success: false, error: 'Lead has already been accepted or rejected' }, 409, origin);
+      }
+      if (row.status !== 'delivered') {
+        return jsonResponse({ success: false, error: 'Lead must be delivered before acceptance' }, 409, origin);
+      }
+
+      await dbRun(env.DB,
+        `UPDATE campaign_leads
+         SET status = 'accepted',
+             accepted_at = CURRENT_TIMESTAMP,
+             price_at_acceptance = ?
+         WHERE id = ?`,
+        [price, campaignLeadId]
+      );
+
+      return jsonResponse({
+        success: true,
+        data: {
+          campaign_lead_id: campaignLeadId,
+          status: 'accepted',
+          price_at_acceptance: price,
+        },
+      }, 200, origin);
+    }
+
     // POST /api/campaign-leads/:id/deliver
     if (
       request.method === 'POST' &&
