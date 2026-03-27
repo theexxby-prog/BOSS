@@ -400,7 +400,105 @@ function showDeployModal(success, url, detail) {
 }
 
 function viewCampaign(id) { State.viewingCampaign = id; renderModule('campaigns'); }
-function editCampaignRequest(id) { alert('Campaign edit form — coming soon'); }
+async function editCampaignRequest(id) {
+  const [cRes, clRes] = await Promise.all([API.getCampaign(id), API.getClients()]);
+  if (!cRes.success) { alert('Could not load campaign.'); return; }
+  const c = cRes.data;
+  const clients = clRes.success ? clRes.data : [];
+  const clientOptions = clients.map(cl =>
+    `<option value="${cl.id}" ${cl.id === c.client_id ? 'selected' : ''}>${cl.name}</option>`
+  ).join('');
+
+  const existing = document.getElementById('edit-campaign-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'edit-campaign-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `<div class="modal-box" style="width:480px;max-width:95vw">
+    <div class="fw7 fs16 mb16">Edit Campaign</div>
+    <div id="ec-error" class="alert a-red mb12" style="display:none"></div>
+
+    <div class="form-group">
+      <label class="form-label">Campaign Name <span style="color:var(--red)">*</span></label>
+      <input id="ec-name" class="form-input" type="text" value="${c.name || ''}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client <span style="color:var(--red)">*</span></label>
+      <select id="ec-client" class="form-input">${clientOptions}</select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Target Leads <span style="color:var(--red)">*</span></label>
+        <input id="ec-target" class="form-input" type="number" min="1" value="${c.target || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">CPL ($) <span style="color:var(--red)">*</span></label>
+        <input id="ec-cpl" class="form-input" type="number" min="0.01" step="0.01" value="${c.cpl || ''}"/>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input id="ec-start" class="form-input" type="date" value="${c.start_date || ''}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Date</label>
+        <input id="ec-end" class="form-input" type="date" value="${c.end_date || ''}"/>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Status</label>
+      <select id="ec-status" class="form-input">
+        ${['draft','active','paused','completed'].map(s =>
+          `<option value="${s}" ${c.status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
+        ).join('')}
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button id="ec-submit" class="btn btn-pri" style="flex:1" onclick="submitEditCampaign(${id})">Save Changes</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('edit-campaign-overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+  document.getElementById('ec-name').focus();
+}
+
+async function submitEditCampaign(id) {
+  const name      = document.getElementById('ec-name').value.trim();
+  const client_id = parseInt(document.getElementById('ec-client').value);
+  const target    = parseInt(document.getElementById('ec-target').value);
+  const cpl       = parseFloat(document.getElementById('ec-cpl').value);
+  const start_date = document.getElementById('ec-start').value || null;
+  const end_date   = document.getElementById('ec-end').value || null;
+  const status     = document.getElementById('ec-status').value;
+  const errEl      = document.getElementById('ec-error');
+  const submitBtn  = document.getElementById('ec-submit');
+
+  errEl.style.display = 'none';
+  if (!name)                  { errEl.textContent = 'Campaign name is required.'; errEl.style.display = ''; return; }
+  if (!client_id)             { errEl.textContent = 'Please select a client.';    errEl.style.display = ''; return; }
+  if (!target || target <= 0) { errEl.textContent = 'Target leads must be > 0.';  errEl.style.display = ''; return; }
+  if (!cpl    || cpl    <= 0) { errEl.textContent = 'CPL must be > 0.';           errEl.style.display = ''; return; }
+
+  submitBtn.disabled = true; submitBtn.textContent = 'Saving…';
+
+  const res = await API.updateCampaign(id, { name, client_id, target, cpl, start_date, end_date, status });
+
+  if (!res.success) {
+    errEl.textContent = res.error || 'Failed to save changes.';
+    errEl.style.display = '';
+    submitBtn.disabled = false; submitBtn.textContent = 'Save Changes';
+    return;
+  }
+
+  document.getElementById('edit-campaign-overlay').remove();
+  renderModule('campaigns');
+}
 async function showNewCampaignForm() {
   const existing = document.getElementById('new-campaign-overlay');
   if (existing) existing.remove();
@@ -557,5 +655,6 @@ window.showNewCampaignForm        = showNewCampaignForm;
 window.showDeployModal            = showDeployModal;
 window.showTALModal               = showTALModal;
 window.submitNewCampaign          = submitNewCampaign;
+window.submitEditCampaign         = submitEditCampaign;
 window.generateInvoiceForCampaign = generateInvoiceForCampaign;
 window.completeCampaignAction     = completeCampaignAction;

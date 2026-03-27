@@ -13,6 +13,7 @@ const State = {
   assetClientFilter: '',
   assetCampaignFilter: '',
   docsTab:       'all',
+  clCampaignFilter: '',
 };
 
 window.State = State;

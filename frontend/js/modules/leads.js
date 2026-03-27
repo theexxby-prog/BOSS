@@ -143,8 +143,13 @@ async function renderLeads() {
   }
 
   if (State.leadsTab === 'campaign_leads') {
-    const clRes = await API.getCampaignLeads();
+    const params  = State.clCampaignFilter ? `?campaign_id=${State.clCampaignFilter}` : '';
+    const clRes   = await API.getCampaignLeads(params);
     const clLeads = clRes.success ? clRes.data : [];
+
+    const campaignOptions = ['<option value="">All Campaigns</option>']
+      .concat(campaigns.map(c => `<option value="${c.id}" ${String(c.id) === String(State.clCampaignFilter) ? 'selected' : ''}>${c.name}</option>`))
+      .join('');
 
     const qaStatusBadge = (s) => {
       if (!s || s === 'pending') return `<span class="badge b-yel">pending</span>`;
@@ -193,7 +198,8 @@ async function renderLeads() {
 
     inner = `
       <div class="sec-hdr mb16">
-        <div><div class="sec-title">Campaign Leads</div><div class="sec-sub">${clLeads.length} total</div></div>
+        <div><div class="sec-title">Campaign Leads</div><div class="sec-sub">${clLeads.length} lead${clLeads.length !== 1 ? 's' : ''}${State.clCampaignFilter ? ' in campaign' : ' across all campaigns'}</div></div>
+        <select class="form-input" style="width:220px;padding:6px 10px;font-size:13px" onchange="setCLCampaignFilter(this.value)">${campaignOptions}</select>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="tbl-wrap"><table>
@@ -222,6 +228,8 @@ async function scoreLead(id) {
   if (res.success) alert(`ICP Score: ${res.score} → ${res.status}`);
   renderModule('leads');
 }
+
+function setCLCampaignFilter(val) { State.clCampaignFilter = val; renderModule('leads'); }
 
 async function clQA(id) {
   const res = await API.qaLead(id);
@@ -259,6 +267,7 @@ window.renderLeads  = renderLeads;
 window.approveLead  = approveLead;
 window.rejectLead   = rejectLead;
 window.scoreLead    = scoreLead;
+window.setCLCampaignFilter = setCLCampaignFilter;
 window.clQA         = clQA;
 window.clDeliver    = clDeliver;
 window.clAccept     = clAccept;
