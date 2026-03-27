@@ -133,6 +133,54 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       }, 200, origin);
     }
 
+    // GET /api/campaigns/:id/invoice-preview
+    if (
+      request.method === 'GET' &&
+      segments[1] === 'campaigns' &&
+      segments[3] === 'invoice-preview'
+    ) {
+      const campaignId = Number(segments[2]);
+      if (!campaignId || isNaN(campaignId)) {
+        return jsonResponse({ success: false, error: 'Invalid campaign id' }, 400, origin);
+      }
+
+      const campaign = await dbFirst(env.DB, 'SELECT id FROM campaigns WHERE id = ?', [campaignId]);
+      if (!campaign) return jsonResponse({ success: false, error: 'Campaign not found' }, 404, origin);
+
+      const preview = await dbFirst<{
+        accepted_count: number;
+        billable_count: number;
+        non_billable_count: number;
+        total_amount: number | null;
+      }>(env.DB,
+        `SELECT
+           SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_count,
+           SUM(CASE WHEN status = 'accepted' AND billing_status = 'billable' THEN 1 ELSE 0 END) as billable_count,
+           SUM(CASE WHEN status = 'accepted' AND billing_status = 'non-billable' THEN 1 ELSE 0 END) as non_billable_count,
+           ROUND(SUM(CASE
+             WHEN status = 'accepted'
+               AND billing_status = 'billable'
+               AND price_at_acceptance IS NOT NULL
+             THEN price_at_acceptance
+             ELSE 0
+           END), 2) as total_amount
+         FROM campaign_leads
+         WHERE campaign_id = ?`,
+        [campaignId]
+      );
+
+      return jsonResponse({
+        success: true,
+        data: {
+          campaign_id: campaignId,
+          accepted_count: preview?.accepted_count ?? 0,
+          billable_count: preview?.billable_count ?? 0,
+          non_billable_count: preview?.non_billable_count ?? 0,
+          total_amount: preview?.total_amount ?? 0,
+        },
+      }, 200, origin);
+    }
+
     // POST /api/campaigns/:id/generate-invoice
     if (
       request.method === 'POST' &&
