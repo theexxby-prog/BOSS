@@ -16,8 +16,8 @@ async function renderLeads() {
   const rejected  = allLeads.filter(l => l.status === 'rejected').length;
   const pending   = allLeads.filter(l => l.status === 'pending').length;
 
-  const tabs      = ['pipeline','qa_queue','all_leads','delivery'];
-  const tabLabels = ['📡 Pipeline', `🔍 QA Queue${qaLeads.length?` (${qaLeads.length})`:''}`, '📋 All Leads', '📤 Delivery'];
+  const tabs      = ['pipeline','qa_queue','all_leads','delivery','campaign_leads'];
+  const tabLabels = ['📡 Pipeline', `🔍 QA Queue${qaLeads.length?` (${qaLeads.length})`:''}`, '📋 All Leads', '📤 Delivery', '🔗 Campaign Leads'];
   const tabHtml   = tabs.map((t,i) => `<div class="tab${t===State.leadsTab?' active':''}" onclick="setLeadsTab('${t}')">${tabLabels[i]}</div>`).join('');
 
   // Update QA badge
@@ -142,6 +142,67 @@ async function renderLeads() {
       <div class="alert a-yel">📤 Delivery to client requires connecting your delivery method (Convertr, HubSpot, CSV). Configure in Settings.</div>`;
   }
 
+  if (State.leadsTab === 'campaign_leads') {
+    const clRes = await API.getCampaignLeads();
+    const clLeads = clRes.success ? clRes.data : [];
+
+    const qaStatusBadge = (s) => {
+      if (!s || s === 'pending') return `<span class="badge b-yel">pending</span>`;
+      if (s === 'approved')      return `<span class="badge b-grn">approved</span>`;
+      if (s === 'rejected')      return `<span class="badge b-red">rejected</span>`;
+      return `<span class="badge">${s}</span>`;
+    };
+
+    const clStatusBadge = (s) => {
+      if (s === 'pending')   return `<span class="badge b-yel">pending</span>`;
+      if (s === 'delivered') return `<span class="badge b-blu">delivered</span>`;
+      if (s === 'accepted')  return `<span class="badge b-grn">accepted</span>`;
+      if (s === 'rejected')  return `<span class="badge b-red">rejected</span>`;
+      return `<span class="badge">${s}</span>`;
+    };
+
+    const billingBadge = (s) => {
+      if (s === 'billable')     return `<span class="badge b-grn">billable</span>`;
+      if (s === 'non-billable') return `<span class="badge b-red">non-billable</span>`;
+      return `<span class="badge b-yel">${s||'—'}</span>`;
+    };
+
+    const rows = clLeads.length ? clLeads.map(l => {
+      const canQA      = !l.qa_status || l.qa_status === 'pending';
+      const canDeliver = l.qa_status === 'approved' && l.status === 'pending';
+      const canAccept  = l.status === 'delivered';
+      const canBilling = l.status === 'accepted';
+      return `<tr>
+        <td class="fs12" style="font-family:monospace;color:var(--t2)">${l.email}</td>
+        <td class="fs12">${l.campaign_name||'—'}</td>
+        <td>${qaStatusBadge(l.qa_status)}</td>
+        <td>${clStatusBadge(l.status)}</td>
+        <td>${billingBadge(l.billing_status)}</td>
+        <td class="fs12 fw7 clr-grn">${l.price_at_acceptance != null ? '$'+l.price_at_acceptance : '—'}</td>
+        <td>
+          <div class="flex gap6">
+            ${canQA      ? `<button class="btn btn-ghost btn-sm fs11" onclick="clQA(${l.campaign_lead_id})">Run QA</button>` : ''}
+            ${canDeliver ? `<button class="btn btn-ghost btn-sm fs11" onclick="clDeliver(${l.campaign_lead_id})">Deliver</button>` : ''}
+            ${canAccept  ? `<button class="btn btn-ghost btn-sm fs11" onclick="clAccept(${l.campaign_lead_id})">Accept</button>` : ''}
+            ${canBilling ? `<button class="btn btn-ghost btn-sm fs11" onclick="clBilling(${l.campaign_lead_id},'${l.billing_status}')">${l.billing_status === 'billable' ? 'Non-billable' : 'Billable'}</button>` : ''}
+          </div>
+        </td>
+      </tr>`;
+    }).join('')
+    : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--t3)">No campaign leads yet.</td></tr>`;
+
+    inner = `
+      <div class="sec-hdr mb16">
+        <div><div class="sec-title">Campaign Leads</div><div class="sec-sub">${clLeads.length} total</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Email</th><th>Campaign</th><th>QA Status</th><th>Status</th><th>Billing</th><th>Price</th><th>Actions</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+  }
+
   return `<div class="fade"><div class="tabs">${tabHtml}</div>${inner}</div>`;
 }
 
@@ -162,8 +223,43 @@ async function scoreLead(id) {
   renderModule('leads');
 }
 
+async function clQA(id) {
+  const res = await API.qaLead(id);
+  if (!res.success) { alert('QA error: ' + (res.error || 'Unknown')); return; }
+  renderModule('leads');
+}
+
+async function clDeliver(id) {
+  const res = await API.deliverLead(id);
+  if (!res.success) { alert('Deliver error: ' + (res.error || 'Unknown')); return; }
+  renderModule('leads');
+}
+
+async function clAccept(id) {
+  const priceStr = prompt('Accept price per lead ($):');
+  if (priceStr === null) return;
+  const price = parseFloat(priceStr);
+  if (isNaN(price) || price < 0) { alert('Invalid price'); return; }
+  const res = await API.acceptLead(id, { price });
+  if (!res.success) { alert('Accept error: ' + (res.error || 'Unknown')); return; }
+  renderModule('leads');
+}
+
+async function clBilling(id, current) {
+  const next = current === 'billable' ? 'non-billable' : 'billable';
+  const reason = prompt(`Override to ${next}. Reason (optional):`) ?? '';
+  if (reason === null) return;
+  const res = await API.billingOverride(id, { billing_status: next, reason, overridden_by: 'Vishal' });
+  if (!res.success) { alert('Billing error: ' + (res.error || 'Unknown')); return; }
+  renderModule('leads');
+}
+
 window.setLeadsTab  = setLeadsTab;
 window.renderLeads  = renderLeads;
 window.approveLead  = approveLead;
 window.rejectLead   = rejectLead;
 window.scoreLead    = scoreLead;
+window.clQA         = clQA;
+window.clDeliver    = clDeliver;
+window.clAccept     = clAccept;
+window.clBilling    = clBilling;

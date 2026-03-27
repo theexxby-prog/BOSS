@@ -115,6 +115,40 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       return jsonResponse({ success: true, data: { alerts, count: alerts.length } }, 200, origin);
     }
 
+    // GET /api/campaign-leads?campaign_id=:id  (list with optional filter)
+    if (request.method === 'GET' && segments[1] === 'campaign-leads' && segments.length === 2) {
+      const url2 = new URL(request.url);
+      const filterCampaignId = url2.searchParams.get('campaign_id');
+
+      const rows = await dbAll<{
+        id: number; campaign_lead_id: number; email: string;
+        campaign_id: number; campaign_name: string;
+        status: string; qa_status: string | null;
+        billing_status: string; price_at_acceptance: number | null;
+        created_at: string;
+      }>(env.DB,
+        `SELECT
+           cl.id          AS campaign_lead_id,
+           gl.email,
+           cl.campaign_id,
+           c.name         AS campaign_name,
+           cl.status,
+           cl.qa_status,
+           cl.billing_status,
+           cl.price_at_acceptance,
+           cl.created_at
+         FROM campaign_leads cl
+         JOIN global_leads gl ON gl.id = cl.lead_id
+         JOIN campaigns    c  ON c.id  = cl.campaign_id
+         ${filterCampaignId ? 'WHERE cl.campaign_id = ?' : ''}
+         ORDER BY cl.created_at DESC
+         LIMIT 500`,
+        filterCampaignId ? [Number(filterCampaignId)] : []
+      );
+
+      return jsonResponse({ success: true, data: rows }, 200, origin);
+    }
+
     // POST /api/campaigns/:id/leads  (segments: api, campaigns, :id, leads)
     if (request.method === 'POST' && segments[1] === 'campaigns' && segments[3] === 'leads' && campaignId) {
       const body = await request.json() as Record<string, unknown>;

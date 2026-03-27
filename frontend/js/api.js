@@ -102,11 +102,23 @@ const API = {
   getSettings:    ()          => apiFetch('/api/settings'),
   updateSettings: (body)      => apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(body) }),
 
+  // Campaign Leads pipeline
+  getCampaignLeads: (params = '') => apiFetch(`/api/campaign-leads${params}`),
+  qaLead:           (id)          => apiFetch(`/api/campaign-leads/${id}/qa`,      { method: 'POST' }),
+  deliverLead:      (id)          => apiFetch(`/api/campaign-leads/${id}/deliver`, { method: 'POST' }),
+  acceptLead:       (id, body)    => apiFetch(`/api/campaign-leads/${id}/accept`,  { method: 'POST', body: JSON.stringify(body) }),
+  billingOverride:  (id, body)    => apiFetch(`/api/campaign-leads/${id}/billing`, { method: 'POST', body: JSON.stringify(body) }),
+
   // ICP Scoring
   scoreLead:      (id)        => apiFetch(`/api/leads/${id}/score`, { method: 'POST' }),
 
   // Pipeline alerts
   getAlerts:      ()          => apiFetch('/api/alerts'),
+
+  // Campaign pipeline actions
+  getInvoicePreview: (id)     => apiFetch(`/api/campaigns/${id}/invoice-preview`),
+  generateInvoice:   (id)     => apiFetch(`/api/campaigns/${id}/generate-invoice`, { method: 'POST' }),
+  completeCampaign:  (id)     => apiFetch(`/api/campaigns/${id}/complete`, { method: 'POST' }),
 };
 
 window.API = API;
