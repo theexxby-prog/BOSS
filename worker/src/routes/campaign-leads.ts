@@ -84,6 +84,55 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       }, 201, origin);
     }
 
+    // POST /api/campaign-leads/:id/deliver
+    if (
+      request.method === 'POST' &&
+      segments[1] === 'campaign-leads' &&
+      segments[3] === 'deliver'
+    ) {
+      const campaignLeadId = Number(segments[2]);
+      if (!campaignLeadId || isNaN(campaignLeadId)) {
+        return jsonResponse({ success: false, error: 'Invalid campaign_lead id' }, 400, origin);
+      }
+
+      const row = await dbFirst<{
+        id: number; lead_id: number; campaign_id: number;
+        status: string; qa_status: string;
+        email: string; name: string | null;
+      }>(env.DB,
+        `SELECT cl.*, gl.email, gl.name
+         FROM campaign_leads cl
+         JOIN global_leads gl ON cl.lead_id = gl.id
+         WHERE cl.id = ?`,
+        [campaignLeadId]
+      );
+      if (!row) return jsonResponse({ success: false, error: 'Campaign lead not found' }, 404, origin);
+
+      if (row.qa_status !== 'approved') {
+        return jsonResponse({ success: false, error: 'Lead must be QA approved before delivery' }, 409, origin);
+      }
+      if (row.status !== 'pending') {
+        return jsonResponse({ success: false, error: 'Lead has already been delivered' }, 409, origin);
+      }
+
+      await dbRun(env.DB,
+        `UPDATE campaign_leads SET status = 'delivered', delivered_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [campaignLeadId]
+      );
+
+      return jsonResponse({
+        success: true,
+        data: {
+          campaign_lead_id: row.id,
+          lead_id: row.lead_id,
+          campaign_id: row.campaign_id,
+          email: row.email,
+          name: row.name ?? null,
+          status: 'delivered',
+        },
+      }, 200, origin);
+    }
+
     // POST /api/campaign-leads/:id/qa
     const qaMatch = /^\/api\/campaign-leads\/(\d+)\/qa$/.test(url.pathname);
     if (request.method === 'POST' && qaMatch) {
