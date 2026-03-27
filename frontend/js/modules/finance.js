@@ -1,79 +1,108 @@
-// Finance & P&L module — v5 (with invoice generator + PDF)
+// Finance & P&L module — v6 (real data)
 
-const finClients = [
-  { name: 'DemandScience', revenue: 11052 },
-  { name: 'TechTarget',    revenue: 3840  },
-  { name: 'NetLine',       revenue: 1280  },
-  { name: 'Integrate.com', revenue: 2460  },
+const DEFAULT_COSTS = [
+  { key: 'apollo',      name: 'Apollo',      cost: 99,  unit: '/mo'   },
+  { key: 'neverbounce', name: 'NeverBounce', cost: 0,   unit: 'usage' },
+  { key: 'instantly',   name: 'Instantly',   cost: 97,  unit: '/mo'   },
 ];
+
+function loadCosts() {
+  try { return JSON.parse(localStorage.getItem('boss_costs') || 'null') || DEFAULT_COSTS; } catch { return DEFAULT_COSTS; }
+}
+function saveCosts(costs) { localStorage.setItem('boss_costs', JSON.stringify(costs)); }
 
 function setFinTab(t) { State.finTab = t; renderModule('finance'); }
 
 async function renderFinance() {
-  const tabs      = ['overview', 'invoices', 'expenses', 'subscriptions'];
-  const tabLabels = ['P&amp;L Overview', 'Invoices', 'Expenses', 'Subscriptions'];
+  const tabs      = ['overview', 'invoices', 'expenses', 'costs'];
+  const tabLabels = ['P&amp;L Overview', 'Invoices', 'Expenses', 'Costs'];
   const tabHtml   = tabs.map((t, i) => `<div class="tab${t === State.finTab ? ' active' : ''}" onclick="setFinTab('${t}')">${tabLabels[i]}</div>`).join('');
 
   let inner = '';
 
   if (State.finTab === 'overview') {
-    const chartData = finClients.map(c => ({ label: c.name.split(' ')[0], val: c.revenue }));
+    const [invRes, cmpRes, clRes] = await Promise.all([API.getInvoices(), API.getCampaigns(), API.getClients()]);
+    const invoices  = invRes.success  ? invRes.data  : [];
+    const campaigns = cmpRes.success  ? cmpRes.data  : [];
+    const clients   = clRes.success   ? clRes.data   : [];
+    const clientMap   = Object.fromEntries(clients.map(c => [c.id, c.name]));
+    const campaignMap = Object.fromEntries(campaigns.map(c => [c.id, c]));
+
+    // Summary KPIs
+    const totalRevenue   = invoices.reduce((s, i) => s + Number(i.total || 0), 0);
+    const paidRevenue    = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total || 0), 0);
+    const outstanding    = invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + Number(i.total || 0), 0);
+    const totalInvoices  = invoices.length;
+
+    // Campaign breakdown — group invoices by campaign_id
+    const byCampaign = {};
+    for (const inv of invoices) {
+      const key = inv.campaign_id || `manual_${inv.client_id}`;
+      if (!byCampaign[key]) byCampaign[key] = { invoices: [] };
+      byCampaign[key].invoices.push(inv);
+    }
+    const breakdownRows = Object.entries(byCampaign).map(([key, group]) => {
+      const first    = group.invoices[0];
+      const cmp      = campaignMap[first.campaign_id];
+      const campName = cmp ? cmp.name : (first.campaign_id ? `Campaign #${first.campaign_id}` : '—');
+      const clientName = clientMap[first.client_id] || first.client_name || `Client #${first.client_id}`;
+      const total    = group.invoices.reduce((s, i) => s + Number(i.total || 0), 0);
+      const paid     = group.invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total || 0), 0);
+      const owed     = total - paid;
+      return `<tr>
+        <td class="fw7 fs13">${campName}</td>
+        <td class="fs12" style="color:var(--text-secondary)">${clientName}</td>
+        <td class="fs12">${group.invoices.length}</td>
+        <td class="fw7" style="color:var(--green-600)">$${total.toLocaleString()}</td>
+        <td>
+          ${paid > 0 ? `<span class="badge badge-green">$${paid.toLocaleString()} paid</span>` : ''}
+          ${owed > 0 ? `<span class="badge badge-amber" style="margin-left:4px">$${owed.toLocaleString()} owed</span>` : ''}
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-tertiary)">No invoices yet.</td></tr>`;
+
     inner = `
       <div class="g4 mb20">
-        ${kpi('Revenue (Mar)', '$14,800', '32',  'vs Feb', '', 'var(--green-600)')}
-        ${kpi('Costs (Mar)',   '$820',    '-5',  'vs Feb', '', 'var(--red-600)')}
-        ${kpi('Net Profit (Mar)', '$13,980', '34', 'vs Feb', '', 'var(--blue-600)')}
-        ${kpi('Profit Margin', '94.5%',  '1.5', 'vs Feb', '', 'var(--blue-600)')}
+        ${kpi('Total Revenue',  '$' + totalRevenue.toLocaleString(), null, `${totalInvoices} invoice${totalInvoices!==1?'s':''}`, '', 'var(--green-600)')}
+        ${kpi('Paid',           '$' + paidRevenue.toLocaleString(),  null, 'received',   '', 'var(--green-600)')}
+        ${kpi('Outstanding',    '$' + outstanding.toLocaleString(),   null, 'awaiting payment', '', 'var(--amber-600)')}
+        ${kpi('Total Invoices', String(totalInvoices), null, '', '', 'var(--blue-600)')}
       </div>
-      <div class="g2 mb16">
-        <div class="card">
-          <div class="sec-title mb12">Year-to-Date P&amp;L</div>
-          <div class="mrow"><span class="mlabel">Total Revenue</span><span class="mval fw8" style="font-size:18px;color:var(--green-600)">$38,800</span></div>
-          <div class="mrow"><span class="mlabel">Total Costs</span><span class="mval" style="color:var(--red-600)">$2,280</span></div>
-          <div class="mrow"><span class="mlabel">Gross Profit</span><span class="mval fw8" style="font-size:18px;color:var(--green-600)">$36,520</span></div>
-          <div class="divider"></div>
-          <div class="mrow"><span class="mlabel">Revenue / Lead</span><span class="mval">$5.82</span></div>
-          <div class="mrow"><span class="mlabel">Cost / Lead</span><span class="mval">$0.54</span></div>
-          <div class="mrow"><span class="mlabel">Profit / Lead</span><span class="mval" style="color:var(--green-600)">$5.28</span></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+          <div class="sec-title">Campaign Breakdown</div>
         </div>
-        <div class="card">
-          <div class="sec-title mb12">Revenue by Client</div>
-          ${barChart(chartData, 340, 180)}
-          <div class="flex fxc gap12 mt8" style="justify-content:center">
-            ${chartData.map(d => `<div class="fs11" style="color:var(--text-tertiary)">${d.label}: <span class="fw7" style="color:var(--green-600)">$${d.val.toLocaleString()}</span></div>`).join('')}
-          </div>
-        </div>
-      </div>
-      <div class="alert a-blu">On track for $18,000 revenue in March. Break-even at 70 leads/month — you're running at 38x break-even.</div>`;
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Campaign</th><th>Client</th><th>Invoices</th><th>Revenue</th><th>Status</th></tr></thead>
+          <tbody>${breakdownRows}</tbody>
+        </table></div>
+      </div>`;
   }
 
-  if (State.finTab === 'subscriptions') {
-    const res = await API.getSubscriptions();
-    const subs = res.success ? res.data : [];
-    const totalSubs = subs.reduce((a, b) => a + b.cost, 0);
-    const catLabels = { email: 'Email', data: 'Data', hosting: 'Hosting', ai: 'AI', social: 'Social', other: 'Other' };
-    const catBadge  = { email: 'badge-blue', data: 'badge-blue', hosting: 'badge-green', ai: 'badge-amber', social: 'badge-amber', other: 'badge-green' };
-    const rows = subs.map(s => `<tr>
-      <td class="fw7">${s.name}</td>
-      <td><span class="badge ${catBadge[s.category] || 'badge-blue'}">${catLabels[s.category] || s.category}</span></td>
-      <td class="fw7" style="color:var(--green-600)">${s.cost === 0 ? 'Usage' : '$' + s.cost}</td>
-      <td class="fs12" style="color:${s.renewal_date <= '2026-04-05' ? 'var(--amber-600)' : 'var(--text-secondary)'}">${fmtDate(s.renewal_date)}</td>
-      <td><span class="badge badge-green">Active</span></td>
-      <td><button class="btn btn-ghost btn-sm">Edit</button></td>
+  if (State.finTab === 'costs') {
+    const costs   = loadCosts();
+    const monthly = costs.filter(c => c.unit === '/mo').reduce((s, c) => s + c.cost, 0);
+    const rows = costs.map((c, i) => `<tr>
+      <td class="fw7">${c.name}</td>
+      <td class="fw7" style="color:var(--red-600)">${c.cost === 0 ? 'Usage-based' : '$' + c.cost + c.unit}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="editCost(${i})">Edit</button></td>
     </tr>`).join('');
-    const aprilCount = subs.filter(s => s.renewal_date <= '2026-04-05' && s.cost > 0);
-    const aprilTotal = aprilCount.reduce((a, b) => a + b.cost, 0);
     inner = `
-      <div class="sec-hdr mb16"><div><div class="sec-title">Subscription Tracker</div><div class="sec-sub">$${totalSubs}/mo</div></div><button class="btn btn-ghost btn-sm">+ Add</button></div>
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+      <div class="sec-hdr mb16">
+        <div><div class="sec-title">Tool Costs</div><div class="sec-sub">$${monthly}/mo fixed</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Tool</th><th>Category</th><th>Cost/mo</th><th>Renewal</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Tool</th><th>Cost</th><th></th></tr></thead>
           <tbody>${rows}
-            <tr style="background:var(--bg-muted)"><td colspan="2" class="fw7" style="font-size:14px">TOTAL</td><td class="fw8" style="font-size:15px;color:var(--green-600)">$${totalSubs}/mo</td><td colspan="3"></td></tr>
+            <tr style="background:var(--bg-muted)">
+              <td class="fw7">Total Fixed</td>
+              <td class="fw7" style="color:var(--red-600)">$${monthly}/mo</td>
+              <td></td>
+            </tr>
           </tbody>
         </table></div>
-      </div>
-      ${aprilCount.length ? `<div class="alert a-yel">${aprilCount.length} subscriptions renewing soon. Total: $${aprilTotal}.</div>` : ''}`;
+      </div>`;
   }
 
   if (State.finTab === 'invoices') {
@@ -410,6 +439,18 @@ async function downloadInvoicePDF(invoiceId) {
   printWindow.document.close();
 }
 
+function editCost(index) {
+  const costs = loadCosts();
+  const c = costs[index];
+  const val = prompt(`${c.name} cost (number, 0 = usage-based):`, c.cost);
+  if (val === null) return;
+  const num = parseFloat(val);
+  if (isNaN(num) || num < 0) { alert('Enter a valid number (0 or more).'); return; }
+  costs[index].cost = num;
+  saveCosts(costs);
+  renderModule('finance');
+}
+
 window.setFinTab            = setFinTab;
 window.renderFinance        = renderFinance;
 window.showInvoiceGenerator = showInvoiceGenerator;
@@ -419,3 +460,4 @@ window.createInvoice        = createInvoice;
 window.markInvoiceSent      = markInvoiceSent;
 window.markInvoicePaid      = markInvoicePaid;
 window.downloadInvoicePDF   = downloadInvoicePDF;
+window.editCost             = editCost;
