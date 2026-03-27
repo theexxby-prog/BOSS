@@ -41,6 +41,18 @@ export default {
       return jsonResponse({ status: 'ok', ts: new Date().toISOString() }, 200, origin);
     }
 
+    // ── Public: landing page form submissions ────────────────────────────────
+    if (request.method === 'POST' && /^\/api\/pages\/[^/]+\/submit$/.test(path)) {
+      return pagesRouter(request, env);
+    }
+
+    // ── Auth guard — all other /api/* routes ─────────────────────────────────
+    const authHeader = request.headers.get('Authorization') || '';
+    const token      = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!env.BOSS_API_TOKEN || token !== env.BOSS_API_TOKEN) {
+      return jsonResponse({ success: false, error: 'Unauthorized' }, 401, origin);
+    }
+
     // ── ICP Scoring — POST /api/leads/:id/score ─────────────────────────────
     if (request.method === 'POST' && /^\/api\/leads\/\d+\/score$/.test(path)) {
       const leadId = parseInt(path.split('/')[3]);

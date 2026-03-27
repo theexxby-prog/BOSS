@@ -2,6 +2,7 @@
 
 export interface Env {
   DB: D1Database;
+  BOSS_API_TOKEN: string;
 }
 
 // ─── Clients ───────────────────────────────────────────────────────────────

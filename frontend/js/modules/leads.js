@@ -17,8 +17,13 @@ async function renderLeads() {
   const pending   = allLeads.filter(l => l.status === 'pending').length;
 
   const tabs      = ['pipeline','qa_queue','all_leads','delivery','campaign_leads'];
-  const tabLabels = ['📡 Pipeline', `🔍 QA Queue${qaLeads.length?` (${qaLeads.length})`:''}`, '📋 All Leads', '📤 Delivery', '🔗 Campaign Leads'];
-  const tabHtml   = tabs.map((t,i) => `<div class="tab${t===State.leadsTab?' active':''}" onclick="setLeadsTab('${t}')">${tabLabels[i]}</div>`).join('');
+  const tabLabels = ['📡 Campaign Status', `🔍 QA Queue${qaLeads.length?` (${qaLeads.length})`:''}`, '📋 ICP Leads', '📤 Delivery Log', '🔗 Pipeline Leads'];
+  // First 4 tabs = ICP scoring model (leads table). Last tab = campaign delivery pipeline (campaign_leads table).
+  const DIVIDER = `<span style="display:inline-flex;align-items:center;padding:0 4px;color:var(--border-strong);font-size:14px;user-select:none" title="ICP scoring model ↑  |  Campaign delivery pipeline ↓">│</span>`;
+  const tabHtml = tabs.map((t,i) =>
+    (i === 4 ? DIVIDER : '') +
+    `<div class="tab${t===State.leadsTab?' active':''}" onclick="setLeadsTab('${t}')">${tabLabels[i]}</div>`
+  ).join('');
 
   // Update QA badge
   const qaBadge = document.getElementById('qa-badge');

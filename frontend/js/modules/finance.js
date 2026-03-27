@@ -135,10 +135,11 @@ async function renderFinance() {
 
     inner = `
       <div class="sec-hdr mb16">
-        <div class="sec-title">Invoices</div>
-        <button class="btn btn-pri" onclick="showInvoiceGenerator()">+ Generate Invoice</button>
+        <div>
+          <div class="sec-title">Invoices</div>
+          <div class="sec-sub">Generated from campaign detail view → Invoice &amp; Billing</div>
+        </div>
       </div>
-      ${completedCampaigns.length ? `<div class="alert a-blu mb16">${completedCampaigns.length} completed campaign${completedCampaigns.length>1?'s':''} available for invoicing.</div>` : ''}
       <div class="card" style="padding:0;overflow:hidden">
         <div class="tbl-wrap"><table>
           <thead><tr><th>Invoice #</th><th>Client</th><th>Leads x CPL</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead>
@@ -175,8 +176,11 @@ async function renderFinance() {
   return `<div class="fade"><div class="tabs">${tabHtml}</div>${inner}</div>`;
 }
 
+// Invoice generation happens in the Campaign detail view (Invoice & Billing section).
+// This keeps one canonical source of truth for invoice creation.
+
 // ═══════════════════════════════════════════════════════════
-// Invoice Generator Modal
+// Invoice Generator Modal — REMOVED (use campaign detail view)
 // ═══════════════════════════════════════════════════════════
 async function showInvoiceGenerator(preselectedClientId) {
   const [clRes, cmpRes] = await Promise.all([API.getClients(), API.getCampaigns()]);
