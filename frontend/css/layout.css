@@ -70,6 +70,7 @@
 .nav-badge.red { background: var(--red-600); color: #fff; }
 
 .sidebar-foot { margin-top: auto; border-top: 0.5px solid var(--border); padding: 10px 12px; }
+.sidebar-date { font-size: 11px; color: var(--text-tertiary); padding: 4px 8px 8px; letter-spacing: 0.02em; }
 .user-row { display: flex; align-items: center; gap: 9px; padding: 8px 8px; border-radius: var(--radius-md); cursor: pointer; }
 .user-row:hover { background: var(--bg-card); }
 .avatar {

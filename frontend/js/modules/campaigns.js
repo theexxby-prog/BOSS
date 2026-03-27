@@ -25,17 +25,17 @@ async function renderCampaigns() {
   if (State.campaignsTab === 'draft') {
     const drafts = campaigns.filter(c => c.status === 'draft');
     const requestCards = drafts.length ? drafts.map(c => renderRequestCard(c, clientMap)).join('') :
-      `<div class="card" style="text-align:center;padding:60px;color:var(--t3)">
+      `<div class="card" style="text-align:center;padding:60px;color:var(--text-tertiary)">
         <div style="font-size:40px;margin-bottom:12px">📭</div>
-        <div class="fw7" style="margin-bottom:4px">No pending campaign requests</div>
+        <div class="fw5" style="margin-bottom:4px">No pending campaign requests</div>
         <div class="fs12">When a client submits a campaign request, it will appear here for your review.</div>
       </div>`;
     return `<div class="fade">
       <div class="g4 mb20">
-        ${kpi('Active Campaigns', String(totalActive), null, '', '📋', 'var(--acc)')}
-        ${kpi('Pending Requests', String(totalRequests), null, 'awaiting review', '📨', 'var(--yel)')}
-        ${kpi('Avg Acceptance', avgAcceptance+'%', null, 'across all campaigns', '✓', 'var(--cyn)')}
-        ${kpi('Pipeline Value', '$'+totalValue.toLocaleString(), null, 'delivered × CPL', '💰', 'var(--yel)')}
+        ${kpi('Active Campaigns', String(totalActive), null, '', '📋', 'var(--blue-600)')}
+        ${kpi('Pending Requests', String(totalRequests), null, 'awaiting review', '📨', 'var(--amber-600)')}
+        ${kpi('Avg Acceptance', avgAcceptance+'%', null, 'across all campaigns', '✓', 'var(--blue-600)')}
+        ${kpi('Pipeline Value', '$'+totalValue.toLocaleString(), null, 'delivered × CPL', '💰', 'var(--amber-600)')}
       </div>
       <div class="sec-hdr mb16"><div class="tabs" style="margin:0">${tabHtml}</div><button class="btn btn-pri btn-sm" onclick="showNewCampaignForm()">+ New Campaign</button></div>
       <div style="display:flex;flex-direction:column;gap:16px">${requestCards}</div>
@@ -51,7 +51,7 @@ async function renderCampaigns() {
     const budget = (c.target||0)*(c.cpl||0);
     const acceptClass = c.acceptance_rate>=90?'clr-grn':c.acceptance_rate>=75?'clr-yel':'clr-red';
     return `<div class="cmp-card" onclick="viewCampaign(${c.id})">
-      <div class="cmp-card-accent" style="background:linear-gradient(135deg,${bc},${bs})"></div>
+      <div class="cmp-card-accent" style="background:var(--blue-600)"></div>
       <div class="cmp-card-body">
         <div class="cmp-card-top">
           <div class="cmp-card-identity">
@@ -88,21 +88,21 @@ async function renderCampaigns() {
         </div>
         <div class="cmp-card-progress-wrap">
           <div class="cmp-card-progress-bar">
-            <div class="cmp-card-progress-fill" style="width:${pct}%;background:${ba}"></div>
+            <div class="cmp-card-progress-fill" style="width:${pct}%"></div>
           </div>
           <span class="cmp-card-pct">${pct}%</span>
         </div>
       </div>
     </div>`;
   }).join('')
-  : `<div class="card" style="text-align:center;padding:40px;color:var(--t3)">No ${State.campaignsTab === 'all' ? '' : State.campaignsTab + ' '}campaigns yet.</div>`;
+  : `<div class="card" style="text-align:center;padding:40px;color:var(--text-tertiary)">No ${State.campaignsTab === 'all' ? '' : State.campaignsTab + ' '}campaigns yet.</div>`;
 
   return `<div class="fade">
     <div class="g4 mb20">
-      ${kpi('Active Campaigns', String(totalActive), null, '', '📋', 'var(--acc)')}
-      ${kpi('Pending Requests', String(totalRequests), null, 'awaiting review', '📨', 'var(--yel)')}
-      ${kpi('Avg Acceptance', avgAcceptance+'%', null, 'across all campaigns', '✓', 'var(--cyn)')}
-      ${kpi('Pipeline Value', '$'+totalValue.toLocaleString(), null, 'delivered × CPL', '💰', 'var(--yel)')}
+      ${kpi('Active Campaigns', String(totalActive), null, '', '📋', 'var(--blue-600)')}
+      ${kpi('Pending Requests', String(totalRequests), null, 'awaiting review', '📨', 'var(--amber-600)')}
+      ${kpi('Avg Acceptance', avgAcceptance+'%', null, 'across all campaigns', '✓', 'var(--blue-600)')}
+      ${kpi('Pipeline Value', '$'+totalValue.toLocaleString(), null, 'delivered × CPL', '💰', 'var(--amber-600)')}
     </div>
     <div class="sec-hdr mb16"><div class="tabs" style="margin:0">${tabHtml}</div><button class="btn btn-pri btn-sm" onclick="showNewCampaignForm()">+ New Campaign</button></div>
     <div style="display:flex;flex-direction:column;gap:16px">${campaignRows}</div>
@@ -126,7 +126,7 @@ function renderRequestCard(c, clientMap) {
   const budget = (c.target||0)*(c.cpl||0);
 
   return `<div class="card rq-card" style="padding:0;overflow:hidden">
-    <div class="rq-header" style="background:linear-gradient(135deg,${bc},${bs})">
+    <div class="rq-header" style="background:var(--blue-600)">
       ${c.logo_url ? `<img src="${c.logo_url}" class="rq-logo"/>` : ''}
       <div class="rq-header-text">
         <div class="rq-name">${c.name}</div>
@@ -143,20 +143,20 @@ function renderRequestCard(c, clientMap) {
       </div>
       <div class="rq-details">
         <div class="rq-col">
-          <div class="rq-section"><div class="rq-section-icon">📄</div><div><div class="request-label">Asset</div><div class="fw6 fs13">${c.asset_name||'—'}</div>${c.asset_url?`<a href="${c.asset_url}" target="_blank" class="fs12" style="color:${ba}">View Asset ↗</a>`:''}</div></div>
+          <div class="rq-section"><div class="rq-section-icon">📄</div><div><div class="request-label">Asset</div><div class="fw5 fs13">${c.asset_name||'—'}</div>${c.asset_url?`<a href="${c.asset_url}" target="_blank" class="fs12" style="color:var(--blue-600)">View Asset ↗</a>`:''}</div></div>
           <div class="rq-section"><div class="rq-section-icon">🎯</div><div><div class="request-label">Target Titles</div><div class="tag-list">${titles.map(t=>`<span class="tag">${t}</span>`).join('')}</div></div></div>
           <div class="rq-section"><div class="rq-section-icon">🏢</div><div><div class="request-label">Industries</div><div class="tag-list">${industries.map(i=>`<span class="tag">${i}</span>`).join('')}</div></div></div>
           <div class="rq-section"><div class="rq-section-icon">📏</div><div><div class="request-label">Company Size</div><div class="tag-list">${sizes.map(s=>`<span class="tag">${s}</span>`).join('')}</div></div></div>
         </div>
         <div class="rq-col">
           <div class="rq-section"><div class="rq-section-icon">🌍</div><div><div class="request-label">Geographies</div><div class="tag-list">${geo.map(g=>`<span class="tag">${g}</span>`).join('')}</div></div></div>
-          <div class="rq-section"><div class="rq-section-icon">📋</div><div><div class="request-label">TAL (${tal.length})</div><div class="fs12" style="color:var(--t3)">${tal.slice(0,8).join(', ')}${tal.length>8?` <span style="color:${ba}">+${tal.length-8} more</span>`:''}</div></div></div>
-          <div class="rq-section"><div class="rq-section-icon">🚫</div><div><div class="request-label">Suppression (${suppression.length})</div><div class="fs12" style="color:var(--t3)">${suppression.length?suppression.join(', '):'None'}</div></div></div>
-          <div class="rq-section"><div class="rq-section-icon">🎨</div><div><div class="request-label">Branding</div><div style="display:flex;gap:6px;align-items:center"><div class="rq-color-swatch" style="background:${bc}"></div><div class="rq-color-swatch" style="background:${bs}"></div><div class="rq-color-swatch" style="background:${ba}"></div>${c.logo_url?`<span class="fs11" style="color:var(--t3);margin-left:4px">+ Logo</span>`:''}</div></div></div>
+          <div class="rq-section"><div class="rq-section-icon">📋</div><div><div class="request-label">TAL (${tal.length})</div><div class="fs12" style="color:var(--text-tertiary)">${tal.slice(0,8).join(', ')}${tal.length>8?` <span style="color:var(--blue-600)">+${tal.length-8} more</span>`:''}</div></div></div>
+          <div class="rq-section"><div class="rq-section-icon">🚫</div><div><div class="request-label">Suppression (${suppression.length})</div><div class="fs12" style="color:var(--text-tertiary)">${suppression.length?suppression.join(', '):'None'}</div></div></div>
+          <div class="rq-section"><div class="rq-section-icon">🎨</div><div><div class="request-label">Branding</div><div style="display:flex;gap:6px;align-items:center"><div class="rq-color-swatch" style="background:${bc}"></div><div class="rq-color-swatch" style="background:${bs}"></div><div class="rq-color-swatch" style="background:${ba}"></div>${c.logo_url?`<span class="fs11" style="color:var(--text-tertiary);margin-left:4px">+ Logo</span>`:''}</div></div></div>
         </div>
       </div>
-      ${customQ.length?`<div class="rq-questions"><div class="request-label" style="margin-bottom:8px">Custom Qualifying Questions</div>${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:${ba}22;color:${ba}">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}</div>`:''}
-      ${c.notes?`<div class="rq-notes"><div class="request-label">Client Notes</div><div class="fs13" style="color:var(--t3);line-height:1.5;margin-top:4px">${c.notes}</div></div>`:''}
+      ${customQ.length?`<div class="rq-questions"><div class="request-label" style="margin-bottom:8px">Custom Qualifying Questions</div>${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}</div>`:''}
+      ${c.notes?`<div class="rq-notes"><div class="request-label">Client Notes</div><div class="fs13" style="color:var(--text-tertiary);line-height:1.5;margin-top:4px">${c.notes}</div></div>`:''}
       <div class="rq-actions">
         <button class="btn btn-pri btn-sm" onclick="deployLandingPage(${c.id})" style="flex:1">🚀 Deploy Landing Page</button>
         <button class="btn btn-ghost btn-sm" onclick="editCampaignRequest(${c.id})">Edit</button>
@@ -170,7 +170,7 @@ function renderRequestCard(c, clientMap) {
 // ═══════════════════════════════════════════════════════════
 async function renderCampaignDetail(campaignId) {
   const [cRes, clRes, pRes, invRes] = await Promise.all([API.getCampaign(campaignId), API.getClients(), API.getPages(), API.getInvoicePreview(campaignId)]);
-  if (!cRes.success) return `<div class="card" style="padding:40px;text-align:center;color:var(--t3)">Campaign not found</div>`;
+  if (!cRes.success) return `<div class="card" style="padding:40px;text-align:center;color:var(--text-tertiary)">Campaign not found</div>`;
 
   const c = cRes.data;
   const clients = clRes.success ? clRes.data : [];
@@ -196,26 +196,26 @@ async function renderCampaignDetail(campaignId) {
   const pct = Math.min(100, Math.round(((c.delivered||0) / Math.max(c.target, 1)) * 100));
   const budget = (c.target||0)*(c.cpl||0);
 
-  const tagHtml = (arr) => arr.length ? arr.map(t=>`<span class="tag">${t}</span>`).join('') : '<span class="fs12" style="color:var(--t3)">—</span>';
+  const tagHtml = (arr) => arr.length ? arr.map(t=>`<span class="tag">${t}</span>`).join('') : '<span class="fs12" style="color:var(--text-tertiary)">—</span>';
 
   const pagesHtml = pages.length ? pages.map(p => {
     const conv = p.submissions && p.views ? Math.round(p.submissions/p.views*100) : 0;
     const url = `https://boss-api.mehtahouse.cc/lp/${p.slug}`;
     return `<div class="cd-lp">
-      <div style="flex:1"><div class="fw7 fs13">${p.name}</div><div class="fs11" style="color:var(--t3)">/${p.slug}</div></div>
-      <span class="fs12 fw7">${p.views||0} views</span>
-      <span class="fs12 fw7 clr-grn">${p.submissions||0} subs</span>
-      <span class="fs12 fw7 clr-acc">${conv}%</span>
+      <div style="flex:1"><div class="fw5 fs13">${p.name}</div><div class="fs11" style="color:var(--text-tertiary)">/${p.slug}</div></div>
+      <span class="fs12 fw5">${p.views||0} views</span>
+      <span class="fs12 fw5 clr-grn">${p.submissions||0} subs</span>
+      <span class="fs12 fw5 clr-acc">${conv}%</span>
       <a href="${url}" target="_blank" class="btn btn-pri btn-sm">View ↗</a>
     </div>`;
   }).join('')
-  : `<div style="padding:10px 0;color:var(--t3)" class="fs12 ta-c">No landing pages yet.${c.status==='draft'?` <button class="btn btn-pri btn-sm" style="margin-left:8px" onclick="deployLandingPage(${c.id})">🚀 Deploy</button>`:''}</div>`;
+  : `<div style="padding:10px 0;color:var(--text-tertiary)" class="fs12 ta-c">No landing pages yet.${c.status==='draft'?` <button class="btn btn-pri btn-sm" style="margin-left:8px" onclick="deployLandingPage(${c.id})">🚀 Deploy</button>`:''}</div>`;
 
   return `<div class="fade">
     <button class="btn btn-ghost btn-sm mb12" onclick="State.viewingCampaign=null;renderModule('campaigns')">← Campaigns</button>
 
     <!-- Header -->
-    <div class="cd-hdr" style="background:linear-gradient(135deg,${bc},${bs})">
+    <div class="cd-hdr" style="background:var(--blue-600)">
       <div style="display:flex;align-items:center;gap:12px">
         ${c.logo_url ? `<img src="${c.logo_url}" class="cd-logo"/>` : ''}
         <div><div class="cd-title">${c.name}</div><div class="cd-sub">${clientMap[c.client_id]||'—'}</div></div>
@@ -230,7 +230,7 @@ async function renderCampaignDetail(campaignId) {
         <div class="cd-metric-l">Target Leads</div>
       </div>
       <div class="cd-metric">
-        <div class="cd-metric-v" style="color:var(--cyn)">$${c.cpl}</div>
+        <div class="cd-metric-v" style="color:var(--blue-600)">$${c.cpl}</div>
         <div class="cd-metric-l">Cost per Lead</div>
       </div>
       <div class="cd-metric">
@@ -244,10 +244,10 @@ async function renderCampaignDetail(campaignId) {
     </div>
 
     ${c.status==='active'?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-      <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${ba};border-radius:3px;transition:width 0.3s"></div>
+      <div style="flex:1;height:5px;background:var(--bg-muted);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:var(--blue-600);border-radius:3px;transition:width 0.3s"></div>
       </div>
-      <span class="fs11 fw7" style="color:var(--t3);width:32px;text-align:right">${pct}%</span>
+      <span class="fs11 fw5" style="color:var(--text-tertiary);width:32px;text-align:right">${pct}%</span>
     </div>`:''}
 
     <!-- All details in one card -->
@@ -256,7 +256,7 @@ async function renderCampaignDetail(campaignId) {
       <!-- Two-column scope grid -->
       <div class="cd-scope-grid">
         <div>
-          <div class="cd-row"><span class="cd-label">Asset</span><span class="fw6 fs13">${c.asset_name||'—'}${c.asset_url?` <a href="${c.asset_url}" target="_blank" style="color:${ba}" class="fs12">↗</a>`:''}</span></div>
+          <div class="cd-row"><span class="cd-label">Asset</span><span class="fw5 fs13">${c.asset_name||'—'}${c.asset_url?` <a href="${c.asset_url}" target="_blank" style="color:var(--blue-600)" class="fs12">↗</a>`:''}</span></div>
           <div class="cd-row"><span class="cd-label">Titles</span><div class="tag-list">${tagHtml(titles)}</div></div>
           <div class="cd-row"><span class="cd-label">Industries</span><div class="tag-list">${tagHtml(industries)}</div></div>
           <div class="cd-row"><span class="cd-label">Coy Size</span><div class="tag-list">${tagHtml(sizes)}</div></div>
@@ -267,15 +267,15 @@ async function renderCampaignDetail(campaignId) {
           <div class="cd-row"><span class="cd-label">TAL</span>
             ${tal.length
               ? `<button class="btn btn-ghost btn-sm fs12" onclick="showTALModal(${c.id})" style="padding:3px 10px">View TAL — ${tal.length} companies →</button>`
-              : '<span class="fs12" style="color:var(--t3)">—</span>'}
+              : '<span class="fs12" style="color:var(--text-tertiary)">—</span>'}
           </div>
-          <div class="cd-row"><span class="cd-label">Suppression</span><span class="fs12" style="color:var(--t3)">${suppression.length?suppression.join(', '):'None'}</span></div>
+          <div class="cd-row"><span class="cd-label">Suppression</span><span class="fs12" style="color:var(--text-tertiary)">${suppression.length?suppression.join(', '):'None'}</span></div>
           <div class="cd-row" style="border:none"><span class="cd-label">Branding</span>
             <div style="display:flex;gap:5px;align-items:center">
               <div class="rq-color-swatch" style="background:${bc}"></div>
               <div class="rq-color-swatch" style="background:${bs}"></div>
               <div class="rq-color-swatch" style="background:${ba}"></div>
-              ${c.logo_url?`<span class="fs11" style="color:var(--t3);margin-left:4px">+ Logo</span>`:''}
+              ${c.logo_url?`<span class="fs11" style="color:var(--text-tertiary);margin-left:4px">+ Logo</span>`:''}
             </div>
           </div>
         </div>
@@ -283,12 +283,12 @@ async function renderCampaignDetail(campaignId) {
 
       ${customQ.length?`<div class="cd-subsection">
         <div class="cd-sub-label">Custom Qualifying Questions</div>
-        ${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:${ba}22;color:${ba}">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}
+        ${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}
       </div>`:''}
 
       ${c.notes?`<div class="cd-subsection" style="border-bottom:none">
         <div class="cd-sub-label">Client Notes</div>
-        <div class="fs13" style="color:var(--t3);line-height:1.5;margin-top:4px">${c.notes}</div>
+        <div class="fs13" style="color:var(--text-tertiary);line-height:1.5;margin-top:4px">${c.notes}</div>
       </div>`:''}
 
       <div class="cd-subsection" style="${!customQ.length&&!c.notes?'border-top:none':''}">
@@ -304,27 +304,27 @@ async function renderCampaignDetail(campaignId) {
           <div class="cd-sub-label" style="display:flex;align-items:center;gap:8px">Invoice &amp; Billing${inv.overdue?overdueBadge:''}</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
             <div style="text-align:center">
-              <div class="fs18 fw7">${inv.accepted_count}</div>
-              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Accepted</div>
+              <div class="fs18 fw5">${inv.accepted_count}</div>
+              <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Accepted</div>
             </div>
             <div style="text-align:center">
-              <div class="fs18 fw7 clr-grn">${inv.billable_count}</div>
-              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Billable</div>
+              <div class="fs18 fw5 clr-grn">${inv.billable_count}</div>
+              <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Billable</div>
             </div>
             <div style="text-align:center">
-              <div class="fs18 fw7" style="color:var(--t3)">${inv.non_billable_count}</div>
-              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Non-billable</div>
+              <div class="fs18 fw5" style="color:var(--text-tertiary)">${inv.non_billable_count}</div>
+              <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Non-billable</div>
             </div>
             <div style="text-align:center">
-              <div class="fs18 fw7 clr-grn">$${(inv.total_amount||0).toLocaleString()}</div>
-              <div class="fs11" style="color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Invoice Total</div>
+              <div class="fs18 fw5 clr-grn">$${(inv.total_amount||0).toLocaleString()}</div>
+              <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Invoice Total</div>
             </div>
           </div>
-          ${hasInvoice ? `<div class="fs12" style="color:var(--t3);margin-bottom:12px">Due: <strong style="color:${inv.overdue?'var(--red)':'var(--t1)'}">${fmtDate(inv.due_date)}</strong></div>` : ''}
+          ${hasInvoice ? `<div class="fs12" style="color:var(--text-tertiary);margin-bottom:12px">Due: <strong style="color:${inv.overdue?'var(--red-600)':'var(--text-primary)'}">${fmtDate(inv.due_date)}</strong></div>` : ''}
           <div style="display:flex;gap:8px">
             ${canGenerate ? `<button class="btn btn-pri btn-sm" onclick="generateInvoiceForCampaign(${c.id})">Generate Invoice</button>` : ''}
             ${hasInvoice && c.status !== 'completed' ? `<button class="btn btn-pri btn-sm" onclick="completeCampaignAction(${c.id})">Complete Campaign</button>` : ''}
-            ${!canGenerate && !hasInvoice ? `<span class="fs12" style="color:var(--t3)">No accepted billable leads yet.</span>` : ''}
+            ${!canGenerate && !hasInvoice ? `<span class="fs12" style="color:var(--text-tertiary)">No accepted billable leads yet.</span>` : ''}
             ${c.status === 'completed' ? `<span class="badge badge-green">Campaign Completed</span>` : ''}
           </div>
         </div>`;
@@ -389,10 +389,10 @@ function showDeployModal(success, url, detail) {
 
   overlay.innerHTML = `<div class="modal-box">
     <div style="font-size:48px;margin-bottom:12px">${success ? '🎉' : '❌'}</div>
-    <div class="fw7" style="font-size:18px;margin-bottom:4px">${success ? 'Landing Page Deployed!' : 'Deployment Failed'}</div>
-    <div class="fs13" style="color:var(--t3);margin-bottom:20px">${success ? detail : detail}</div>
+    <div class="fw5" style="font-size:18px;margin-bottom:4px">${success ? 'Landing Page Deployed!' : 'Deployment Failed'}</div>
+    <div class="fs13" style="color:var(--text-tertiary);margin-bottom:20px">${success ? detail : detail}</div>
     ${success ? `<a href="${url}" target="_blank" class="btn btn-pri" style="width:100%;justify-content:center;margin-bottom:8px">🔗 View Live Page ↗</a>
-    <div class="fs11" style="color:var(--t3);word-break:break-all">${url}</div>` : ''}
+    <div class="fs11" style="color:var(--text-tertiary);word-break:break-all">${url}</div>` : ''}
     <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="this.closest('.modal-overlay').remove()">Close</button>
   </div>`;
 
@@ -418,23 +418,23 @@ async function editCampaignRequest(id) {
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
   overlay.innerHTML = `<div class="modal-box" style="width:480px;max-width:95vw">
-    <div class="fw7 fs16 mb16">Edit Campaign</div>
+    <div class="fw5 fs16 mb16">Edit Campaign</div>
 
     <div class="form-group">
-      <label class="form-label">Campaign Name <span style="color:var(--red)">*</span></label>
+      <label class="form-label">Campaign Name <span style="color:var(--red-600)">*</span></label>
       <input id="ec-name" class="form-input" type="text" value="${c.name || ''}"/>
     </div>
     <div class="form-group">
-      <label class="form-label">Client <span style="color:var(--red)">*</span></label>
+      <label class="form-label">Client <span style="color:var(--red-600)">*</span></label>
       <select id="ec-client" class="form-input">${clientOptions}</select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
-        <label class="form-label">Target Leads <span style="color:var(--red)">*</span></label>
+        <label class="form-label">Target Leads <span style="color:var(--red-600)">*</span></label>
         <input id="ec-target" class="form-input" type="number" min="1" value="${c.target || ''}"/>
       </div>
       <div class="form-group">
-        <label class="form-label">CPL ($) <span style="color:var(--red)">*</span></label>
+        <label class="form-label">CPL ($) <span style="color:var(--red-600)">*</span></label>
         <input id="ec-cpl" class="form-input" type="number" min="0.01" step="0.01" value="${c.cpl || ''}"/>
       </div>
     </div>
@@ -513,14 +513,14 @@ async function showNewCampaignForm() {
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
   overlay.innerHTML = `<div class="modal-box" style="width:480px;max-width:95vw">
-    <div class="fw7 fs16 mb16">New Campaign</div>
+    <div class="fw5 fs16 mb16">New Campaign</div>
 
     <div class="form-group">
-      <label class="form-label">Campaign Name <span style="color:var(--red)">*</span></label>
+      <label class="form-label">Campaign Name <span style="color:var(--red-600)">*</span></label>
       <input id="nc-name" class="form-input" type="text" placeholder="e.g. DemandScience Q3 ABM"/>
     </div>
     <div class="form-group">
-      <label class="form-label">Client <span style="color:var(--red)">*</span></label>
+      <label class="form-label">Client <span style="color:var(--red-600)">*</span></label>
       <select id="nc-client" class="form-input">
         <option value="">— Select client —</option>
         ${clientOptions}
@@ -528,11 +528,11 @@ async function showNewCampaignForm() {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
-        <label class="form-label">Target Leads <span style="color:var(--red)">*</span></label>
+        <label class="form-label">Target Leads <span style="color:var(--red-600)">*</span></label>
         <input id="nc-target" class="form-input" type="number" min="1" placeholder="500"/>
       </div>
       <div class="form-group">
-        <label class="form-label">CPL ($) <span style="color:var(--red)">*</span></label>
+        <label class="form-label">CPL ($) <span style="color:var(--red-600)">*</span></label>
         <input id="nc-cpl" class="form-input" type="number" min="0.01" step="0.01" placeholder="45"/>
       </div>
     </div>
@@ -635,8 +635,8 @@ function showTALModal(campaignId) {
 
   overlay.innerHTML = `<div class="modal-box tal-modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="fw7 fs16">Target Account List</div>
-      <span class="fs13" style="color:var(--t3)">${tal.length.toLocaleString()} companies</span>
+      <div class="fw5 fs16">Target Account List</div>
+      <span class="fs13" style="color:var(--text-tertiary)">${tal.length.toLocaleString()} companies</span>
     </div>
     <div class="tal-modal-list">
       ${tal.map(t => `<span class="tag">${t}</span>`).join('')}

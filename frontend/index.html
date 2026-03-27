@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
 
-  <link rel="stylesheet" href="css/variables.css?v=4"/>
-  <link rel="stylesheet" href="css/layout.css?v=4"/>
-  <link rel="stylesheet" href="css/components.css?v=5"/>
+  <link rel="stylesheet" href="css/variables.css?v=5"/>
+  <link rel="stylesheet" href="css/layout.css?v=5"/>
+  <link rel="stylesheet" href="css/components.css?v=6"/>
   <link rel="stylesheet" href="css/modules/hq.css?v=4"/>
   <link rel="stylesheet" href="css/modules/leads.css?v=4"/>
   <link rel="stylesheet" href="css/modules/clients.css?v=5"/>
@@ -101,6 +101,7 @@
     </div>
 
     <div class="sidebar-foot">
+      <div class="sidebar-date" id="date-chip"></div>
       <div class="user-row">
         <div class="avatar">VM</div>
         <div>
@@ -120,7 +121,6 @@
         <span class="topbar-sub"   id="topbar-sub">Your complete business at a glance</span>
       </div>
       <div class="topbar-right">
-        <div class="date-chip" id="date-chip">Loading...</div>
         <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
@@ -135,12 +135,6 @@
 
 </div>
 
-<!-- Ask Claude floating button -->
-<button class="ask-claude-btn" onclick="alert('Ask Claude — coming soon')">
-  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-  Ask Claude
-</button>
-
 <!-- ── JAVASCRIPT ─────────────────────────────────────────────────────────── -->
 <script src="js/api.js?v=7"></script>
 <script src="js/state.js?v=5"></script>
@@ -149,8 +143,8 @@
 <script src="js/components/chart.js?v=4"></script>
 <script src="js/components/table.js?v=4"></script>
 <script src="js/modules/hq.js?v=5"></script>
-<script src="js/modules/campaigns.js?v=10"></script>
-<script src="js/modules/leads.js?v=8"></script>
+<script src="js/modules/campaigns.js?v=11"></script>
+<script src="js/modules/leads.js?v=9"></script>
 <script src="js/modules/clients.js?v=5"></script>
 <script src="js/modules/assets.js?v=5"></script>
 <script src="js/modules/finance.js?v=8"></script>
@@ -159,7 +153,7 @@
 <script src="js/modules/bd.js?v=4"></script>
 <script src="js/modules/ops.js?v=4"></script>
 <script src="js/modules/settings.js?v=4"></script>
-<script src="js/router.js?v=6"></script>
-<script src="js/main.js?v=5"></script>
+<script src="js/router.js?v=7"></script>
+<script src="js/main.js?v=6"></script>
 </body>
 </html>

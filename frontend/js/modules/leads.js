@@ -34,16 +34,16 @@ async function renderLeads() {
   if (State.leadsTab === 'pipeline') {
     const rows = campaigns.length ? campaigns.map(c => {
       const pct = c.target > 0 ? Math.round(c.delivered / c.target * 100) : 0;
-      const fillColor = c.pacing === 'behind' ? 'var(--yel)' : 'var(--acc)';
+      const fillColor = c.pacing === 'behind' ? 'var(--amber-600)' : 'var(--blue-600)';
       return `<tr>
-        <td><div class="fw7 fs13">${c.name}</div><div class="fs11" style="color:var(--t3)">${c.asset_name||'—'}</div></td>
+        <td><div class="fw5 fs13">${c.name}</div><div class="fs11" style="color:var(--t3)">${c.asset_name||'—'}</div></td>
         <td class="fs12">${c.client_name||'—'}</td>
         <td style="min-width:140px">
-          <div class="flex fxb fs11 mb4"><span style="color:var(--t3)">${c.delivered}/${c.target}</span><span class="fw7">${pct}%</span></div>
+          <div class="flex fxb fs11 mb4"><span style="color:var(--t3)">${c.delivered}/${c.target}</span><span class="fw5">${pct}%</span></div>
           <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${fillColor}"></div></div>
         </td>
-        <td class="${(c.acceptance_rate||0)>=90?'clr-grn':(c.acceptance_rate||0)>=80?'clr-yel':'clr-red'} fw7">${c.acceptance_rate||0}%</td>
-        <td class="fw7 clr-grn">$${c.cpl}</td>
+        <td class="${(c.acceptance_rate||0)>=90?'clr-grn':(c.acceptance_rate||0)>=80?'clr-yel':'clr-red'} fw5">${c.acceptance_rate||0}%</td>
+        <td class="fw5 clr-grn">$${c.cpl}</td>
         <td>${statusBadge(c.status)}</td>
         <td>${pacingBadge(c.pacing)}</td>
       </tr>`;
@@ -52,10 +52,10 @@ async function renderLeads() {
 
     inner = `
       <div class="g4 mb20">
-        ${kpi('Total Leads', String(allLeads.length), null, 'in pipeline', '🎯', 'var(--acc)')}
-        ${kpi('Approved', String(approved), null, 'ready to deliver', '✓', 'var(--grn)')}
-        ${kpi('QA Queue', String(qaLeads.length), null, 'need review', '🔍', 'var(--yel)')}
-        ${kpi('Rejected', String(rejected), null, 'below threshold', '✕', 'var(--red)')}
+        ${kpi('Total Leads', String(allLeads.length), null, 'in pipeline', '🎯', 'var(--blue-600)')}
+        ${kpi('Approved', String(approved), null, 'ready to deliver', '✓', 'var(--green-600)')}
+        ${kpi('QA Queue', String(qaLeads.length), null, 'need review', '🔍', 'var(--amber-600)')}
+        ${kpi('Rejected', String(rejected), null, 'below threshold', '✕', 'var(--red-600)')}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="tbl-wrap"><table>
@@ -67,7 +67,7 @@ async function renderLeads() {
 
   if (State.leadsTab === 'qa_queue') {
     const cards = qaLeads.length ? qaLeads.map(l => {
-      const scoreColor = l.icp_score>=90?'var(--grn)':l.icp_score>=80?'var(--yel)':'var(--red)';
+      const scoreColor = l.icp_score>=90?'var(--green-600)':l.icp_score>=80?'var(--amber-600)':'var(--red-600)';
       const r = 20, circ = 2*Math.PI*r, dash = (l.icp_score/100)*circ;
       return `<div class="qa-card">
         <div class="qa-hdr">
@@ -77,7 +77,7 @@ async function renderLeads() {
           </div>
           <div class="flex fxc gap8">
             <svg width="50" height="50" viewBox="0 0 50 50">
-              <circle cx="25" cy="25" r="${r}" fill="none" stroke="var(--brd)" stroke-width="4"/>
+              <circle cx="25" cy="25" r="${r}" fill="none" stroke="var(--border)" stroke-width="4"/>
               <circle cx="25" cy="25" r="${r}" fill="none" stroke="${scoreColor}" stroke-width="4"
                 stroke-dasharray="${dash} ${circ}" stroke-dashoffset="${circ/4}" stroke-linecap="round" transform="rotate(-90 25 25)"/>
               <text x="25" y="29" text-anchor="middle" style="fill:${scoreColor};font-size:12px;font-weight:800;font-family:inherit">${l.icp_score}</text>
@@ -97,8 +97,8 @@ async function renderLeads() {
           <button class="btn btn-grn btn-sm" onclick="approveLead(${l.id})">✓ Approve</button>
           <button class="btn btn-red btn-sm" onclick="rejectLead(${l.id})">✕ Reject</button>
           <button class="btn btn-ghost btn-sm" onclick="scoreLead(${l.id})">↻ Re-score</button>
-          ${l.email_verified?'<span class="badge b-grn" style="margin-left:auto">✉ Verified</span>':''}
-          <span class="badge b-blu">✓ Consent</span>
+          ${l.email_verified?'<span class="badge badge-green" style="margin-left:auto">✉ Verified</span>':''}
+          <span class="badge badge-blue">✓ Consent</span>
         </div>
       </div>`;
     }).join('')
@@ -112,12 +112,12 @@ async function renderLeads() {
 
   if (State.leadsTab === 'all_leads') {
     const rows = allLeads.map(l => `<tr>
-      <td class="fw7">${l.first_name} ${l.last_name}</td>
+      <td class="fw5">${l.first_name} ${l.last_name}</td>
       <td style="color:var(--t2)">${l.title}</td>
       <td>${l.company}</td>
       <td class="fs12">${l.industry||'—'}</td>
       <td style="font-family:monospace;font-size:11px;color:var(--t3)">${l.email}</td>
-      <td><span style="font-weight:700;color:${(l.icp_score||0)>=90?'var(--grn)':(l.icp_score||0)>=70?'var(--yel)':'var(--red)'}">${l.icp_score||'—'}</span></td>
+      <td><span style="font-weight:500;color:${(l.icp_score||0)>=90?'var(--green-600)':(l.icp_score||0)>=70?'var(--amber-600)':'var(--red-600)'}">${l.icp_score||'—'}</span></td>
       <td>${statusBadge(l.status)}</td>
       <td class="fs11" style="color:var(--t3)">${fmtDate(l.captured_at)}</td>
     </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--t3)">No leads yet.</td></tr>`;
@@ -139,10 +139,10 @@ async function renderLeads() {
     const delivered = allLeads.filter(l => l.status === 'delivered' || l.status === 'accepted');
     inner = `
       <div class="g4 mb20">
-        ${kpi('Total Delivered', String(delivered.length), null, '', '📤', 'var(--grn)')}
-        ${kpi('Accepted', String(allLeads.filter(l=>l.status==='accepted').length), null, '', '✅', 'var(--grn)')}
-        ${kpi('Rejected', String(rejected), null, '', '❌', 'var(--red)')}
-        ${kpi('Pending Delivery', String(approved), null, 'approved, not yet sent', '⏳', 'var(--yel)')}
+        ${kpi('Total Delivered', String(delivered.length), null, '', '📤', 'var(--green-600)')}
+        ${kpi('Accepted', String(allLeads.filter(l=>l.status==='accepted').length), null, '', '✅', 'var(--green-600)')}
+        ${kpi('Rejected', String(rejected), null, '', '❌', 'var(--red-600)')}
+        ${kpi('Pending Delivery', String(approved), null, 'approved, not yet sent', '⏳', 'var(--amber-600)')}
       </div>
       <div class="alert a-yel">📤 Delivery to client requires connecting your delivery method (Convertr, HubSpot, CSV). Configure in Settings.</div>`;
   }
@@ -157,24 +157,24 @@ async function renderLeads() {
       .join('');
 
     const qaStatusBadge = (s) => {
-      if (!s || s === 'pending') return `<span class="badge b-yel">pending</span>`;
-      if (s === 'approved')      return `<span class="badge b-grn">approved</span>`;
-      if (s === 'rejected')      return `<span class="badge b-red">rejected</span>`;
+      if (!s || s === 'pending') return `<span class="badge badge-amber">pending</span>`;
+      if (s === 'approved')      return `<span class="badge badge-green">approved</span>`;
+      if (s === 'rejected')      return `<span class="badge badge-red">rejected</span>`;
       return `<span class="badge">${s}</span>`;
     };
 
     const clStatusBadge = (s) => {
-      if (s === 'pending')   return `<span class="badge b-yel">pending</span>`;
-      if (s === 'delivered') return `<span class="badge b-blu">delivered</span>`;
-      if (s === 'accepted')  return `<span class="badge b-grn">accepted</span>`;
-      if (s === 'rejected')  return `<span class="badge b-red">rejected</span>`;
+      if (s === 'pending')   return `<span class="badge badge-amber">pending</span>`;
+      if (s === 'delivered') return `<span class="badge badge-blue">delivered</span>`;
+      if (s === 'accepted')  return `<span class="badge badge-green">accepted</span>`;
+      if (s === 'rejected')  return `<span class="badge badge-red">rejected</span>`;
       return `<span class="badge">${s}</span>`;
     };
 
     const billingBadge = (s) => {
-      if (s === 'billable')     return `<span class="badge b-grn">billable</span>`;
-      if (s === 'non-billable') return `<span class="badge b-red">non-billable</span>`;
-      return `<span class="badge b-yel">${s||'—'}</span>`;
+      if (s === 'billable')     return `<span class="badge badge-green">billable</span>`;
+      if (s === 'non-billable') return `<span class="badge badge-red">non-billable</span>`;
+      return `<span class="badge badge-amber">${s||'—'}</span>`;
     };
 
     const rows = clLeads.length ? clLeads.map(l => {
@@ -188,7 +188,7 @@ async function renderLeads() {
         <td>${qaStatusBadge(l.qa_status)}</td>
         <td>${clStatusBadge(l.status)}</td>
         <td>${billingBadge(l.billing_status)}</td>
-        <td class="fs12 fw7 clr-grn">${l.price_at_acceptance != null ? '$'+l.price_at_acceptance : '—'}</td>
+        <td class="fs12 fw5 clr-grn">${l.price_at_acceptance != null ? '$'+l.price_at_acceptance : '—'}</td>
         <td>
           <div class="flex gap6">
             ${canQA      ? `<button class="btn btn-ghost btn-sm fs11" onclick="clQA(${l.campaign_lead_id}, this)">Run QA</button>` : ''}

@@ -63,7 +63,13 @@ async function renderModule(id) {
   const renderer = MODULE_RENDERERS[id] || MODULE_RENDERERS.overview;
   const result   = renderer();
   if (result instanceof Promise) {
-    el.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-tertiary);font-size:13px">Loading…</div>';
+    el.innerHTML = `<div style="padding:0">
+      <div class="skeleton" style="height:18px;width:140px;margin-bottom:20px;border-radius:6px"></div>
+      <div class="g4" style="margin-bottom:20px">
+        ${Array(4).fill('<div class="skeleton" style="height:88px;border-radius:12px"></div>').join('')}
+      </div>
+      <div class="skeleton" style="height:320px;border-radius:12px"></div>
+    </div>`;
     el.innerHTML = await result;
   } else {
     el.innerHTML = result;
