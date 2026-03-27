@@ -84,6 +84,65 @@ export async function campaignLeadsRouter(request: Request, env: Env, origin: st
       }, 201, origin);
     }
 
+    // POST /api/campaign-leads/:id/qa
+    const qaMatch = /^\/api\/campaign-leads\/(\d+)\/qa$/.test(url.pathname);
+    if (request.method === 'POST' && qaMatch) {
+      const clSegments = url.pathname.split('/').filter(Boolean);
+      const campaignLeadId = Number(clSegments[2]);
+      if (!campaignLeadId || isNaN(campaignLeadId)) {
+        return jsonResponse({ success: false, error: 'Invalid campaign_lead id' }, 400, origin);
+      }
+
+      // Step 2 — Fetch campaign_lead + email from global_lead
+      const row = await dbFirst<{
+        id: number; status: string; qa_status: string;
+        lead_id: number; campaign_id: number;
+        email: string; name: string | null;
+      }>(env.DB,
+        `SELECT cl.*, gl.email, gl.name
+         FROM campaign_leads cl
+         JOIN global_leads gl ON cl.lead_id = gl.id
+         WHERE cl.id = ?`,
+        [campaignLeadId]
+      );
+      if (!row) return jsonResponse({ success: false, error: 'Campaign lead not found' }, 404, origin);
+
+      // Step 3 — Guard conditions
+      if (row.qa_status === 'approved' || row.qa_status === 'rejected') {
+        return jsonResponse({ success: false, error: 'QA already completed for this lead' }, 409, origin);
+      }
+      if (row.status !== 'pending') {
+        return jsonResponse({ success: false, error: 'QA can only be run on pending leads' }, 409, origin);
+      }
+
+      // Step 4 — QA checks
+      const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      let qa_status: string;
+      let qa_reason: string | null;
+
+      if (!row.email || !row.email.trim()) {
+        qa_status = 'rejected';
+        qa_reason = 'Missing email';
+      } else if (!EMAIL_REGEX.test(row.email)) {
+        qa_status = 'rejected';
+        qa_reason = 'Invalid email format';
+      } else {
+        qa_status = 'approved';
+        qa_reason = null;
+      }
+
+      // Step 5 — Persist result
+      await dbRun(env.DB,
+        `UPDATE campaign_leads SET qa_status = ?, qa_reason = ?, qa_checked_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [qa_status, qa_reason, campaignLeadId]
+      );
+
+      return jsonResponse({
+        success: true,
+        data: { campaign_lead_id: campaignLeadId, qa_status, qa_reason },
+      }, 200, origin);
+    }
+
     return jsonResponse({ success: false, error: 'Not found' }, 404, origin);
   } catch (err) {
     return jsonResponse({ success: false, error: 'Internal server error' }, 500, origin);
