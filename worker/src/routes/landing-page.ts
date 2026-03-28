@@ -79,6 +79,11 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     `<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><ellipse cx="11" cy="8" rx="8" ry="3" stroke="${bc}" stroke-width="1.5"/><path d="M3 8v6c0 1.66 3.58 3 8 3s8-1.34 8-3V8" stroke="${bc}" stroke-width="1.5"/><path d="M3 11c0 1.66 3.58 3 8 3s8-1.34 8-3" stroke="${bc}" stroke-width="1.5"/></svg>`,
   ];
 
+  // Scale headline font down if the text is long — safety net for any edge cases
+  const h1Size = headline.length > 80 ? 'clamp(24px, 3vw, 38px)'
+    : headline.length > 55             ? 'clamp(28px, 3.5vw, 48px)'
+    :                                    'clamp(36px, 4.5vw, 68px)';
+
   const bulletsHtml = bullets.slice(0, 4).map((b, i) => `
     <div class="bullet">
       <div class="bullet-icon">${bulletIcons[i % 4]}</div>
@@ -155,7 +160,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     h1 {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(36px, 4.5vw, 68px);
+      font-size: ${h1Size};
       font-weight: 700;
       line-height: 1.05;
       letter-spacing: -1px;

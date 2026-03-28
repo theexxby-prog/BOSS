@@ -82,6 +82,12 @@ function cap(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
+// Hard cap: truncate to N words if the AI ignored the length instructions
+function capWords(s: string, max: number): string {
+  const words = s.trim().split(/\s+/);
+  return words.length <= max ? s : words.slice(0, max).join(' ');
+}
+
 interface TemplateDef {
   headline:    (s: Slots) => string;
   subheadline: (s: Slots) => string;
@@ -150,6 +156,13 @@ function composeCopy(slots: Slots): Record<string, unknown> {
   const docType = validTypes.includes(slots.doc_type) ? slots.doc_type : 'Guide';
   const tmpl    = TEMPLATES[docType];
 
+  // Enforce word caps regardless of what the AI returned
+  slots = {
+    ...slots,
+    persona:           capWords(slots.persona,           3),
+    outcome_statement: capWords(slots.outcome_statement, 5),
+  };
+
   const proofPoints = Array.isArray(slots.proof_points) ? slots.proof_points : [];
   const bullets = proofPoints.slice(0, 4).map(parseBullet);
   while (bullets.length < 4) {
@@ -178,8 +191,8 @@ Output ONLY valid JSON with these exact fields — no markdown fences, no explan
 
 Field rules:
 - pain_statement: One sentence. The specific challenge this persona faces right now. Max 25 words. Do not start with "I" or "We".
-- outcome_statement: 4-8 words. Noun phrase (no verbs). The primary transformation or result. Lowercase. Example: "consistent pipeline from inbound content".
-- persona: 2-5 words. Job function and seniority. Lowercase. Example: "B2B revenue leaders" or "enterprise IT managers".
+- outcome_statement: 3-5 words MAXIMUM. Noun phrase (no verbs). The core transformation, ultra-concise. Lowercase. Example: "consistent inbound pipeline" or "production-ready GPU infrastructure". Never exceed 5 words.
+- persona: 2-3 words MAXIMUM. Job function only, no adjectives. Lowercase. Example: "revenue leaders" or "IT managers" or "engineering teams". Never exceed 3 words.
 - proof_points: Exactly 4 items. Format each as "Short Title: one concrete sentence about what the reader learns or gets". Title is 2-4 words. Derive only from actual asset content, not generic claims.
 - cta_focus: 2-4 words. The download action. Example: "Download Now" or "Get Instant Access".
 - social_context: Short credibility line. No invented numbers. Example: "Trusted by demand generation teams at leading B2B organisations."
