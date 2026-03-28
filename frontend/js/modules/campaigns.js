@@ -206,7 +206,8 @@ async function renderCampaignDetail(campaignId) {
       <span class="fs12 fw5">${p.views||0} views</span>
       <span class="fs12 fw5 clr-grn">${p.submissions||0} subs</span>
       <span class="fs12 fw5 clr-acc">${conv}%</span>
-      <a href="${url}" target="_blank" class="btn btn-pri btn-sm">View ↗</a>
+      <a href="${url}" target="_blank" class="btn btn-ghost btn-sm">View ↗</a>
+      <button class="btn btn-pri btn-sm" onclick="regeneratePage(${c.id},${p.id},'${p.slug}')">↻ Regen</button>
     </div>`;
   }).join('')
   : `<div style="padding:10px 0;color:var(--text-tertiary)" class="fs12 ta-c">No landing pages yet.${c.status==='draft'?` <button class="btn btn-pri btn-sm" style="margin-left:8px" onclick="deployLandingPage(${c.id})">🚀 Deploy</button>`:''}</div>`;
@@ -484,6 +485,28 @@ async function approveCopyAndDeploy(campaignId, clientId) {
 
   document.getElementById('preview-modal-overlay')?.remove();
   await _deployPageWithCopy(cRes.data, copy);
+}
+
+// Regenerate AI copy for an already-deployed landing page and save it
+async function regeneratePage(campaignId, pageId, slug) {
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+  const c = cRes.data;
+  showGeneratingModal(c.asset_name || c.name);
+  const genRes = await API.generatePage(campaignId);
+  removeGeneratingModal();
+  if (!genRes.success) {
+    showGenerateErrorModal(c, genRes.error || 'Unknown error');
+    return;
+  }
+  // Save new ai_copy directly to the existing page
+  const saveRes = await apiFetch(`/api/pages/${pageId}`, { method: 'PATCH', body: JSON.stringify({ ai_copy: JSON.stringify(genRes.data) }) });
+  if (!saveRes.success) {
+    showToast('Copy regenerated but failed to save: ' + (saveRes.error || ''), 'error');
+    return;
+  }
+  showToast('Page copy regenerated — reload the live page to see changes', 'success');
+  renderModule('campaigns');
 }
 
 async function regenerateCopy(campaignId) {
@@ -809,6 +832,7 @@ window.viewCampaign               = viewCampaign;
 window.deployLandingPage          = deployLandingPage;
 window.approveCopyAndDeploy       = approveCopyAndDeploy;
 window.regenerateCopy             = regenerateCopy;
+window.regeneratePage             = regeneratePage;
 window.editCampaignRequest        = editCampaignRequest;
 window.showNewCampaignForm        = showNewCampaignForm;
 window.showDeployModal            = showDeployModal;
