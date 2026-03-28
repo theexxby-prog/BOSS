@@ -1,11 +1,16 @@
-// generate-page.ts — AI-powered landing page copy generation
+// generate-page.ts — Template-based AI landing page copy generation
 // POST /api/campaigns/:id/generate-page
-// Reads the asset, builds a campaign brief, calls Claude, returns structured copy JSON.
-// Does NOT write to DB — the frontend previews the copy before deploying.
+//
+// Step 1: Claude extracts compact semantic slots from the campaign brief + asset.
+// Step 2: Server composes final copy deterministically from doc_type templates.
+//
+// Does NOT write to DB — the frontend previews before deploying.
 
 import { jsonResponse } from '../cors';
 import { dbFirst } from '../db';
 import type { Env } from '../types';
+
+// ── Asset fetching ────────────────────────────────────────────────────────────
 
 function uint8ToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -31,8 +36,7 @@ async function fetchAssetContent(assetUrl: string): Promise<
     const contentType = res.headers.get('content-type') || '';
 
     if (contentType.includes('application/pdf')) {
-      // Hard cap at 800KB — PDFs are token-dense and the API has a 30k input TPM limit.
-      // Truncating a PDF corrupts it, so we fall back to 'none' if over the cap.
+      // Hard cap at 800KB — PDFs are token-dense and truncating corrupts them.
       const MAX_PDF_BYTES = 800 * 1024;
       const contentLength = parseInt(res.headers.get('content-length') || '0');
       if (contentLength > 0 && contentLength > MAX_PDF_BYTES) return { type: 'none' };
@@ -58,6 +62,142 @@ async function fetchAssetContent(assetUrl: string): Promise<
     return { type: 'none' };
   }
 }
+
+// ── Slot schema (what Claude outputs) ────────────────────────────────────────
+
+interface Slots {
+  pain_statement:    string;
+  outcome_statement: string;
+  persona:           string;
+  proof_points:      string[];
+  cta_focus:         string;
+  social_context:    string;
+  hero_stat:         string;
+  doc_type:          string;
+}
+
+// ── Template definitions ──────────────────────────────────────────────────────
+
+function cap(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+interface TemplateDef {
+  headline:    (s: Slots) => string;
+  subheadline: (s: Slots) => string;
+  hook:        (s: Slots) => string;
+  cta:         ()         => string;
+}
+
+const TEMPLATES: Record<string, TemplateDef> = {
+  Report: {
+    headline:    (s) => `${cap(s.outcome_statement)}: The ${cap(s.persona)} Report`,
+    subheadline: (s) => `${cap(s.pain_statement)} This report surfaces the data and analysis your team needs to act.`,
+    hook:        (s) => `For ${s.persona}`,
+    cta:         ()  => 'Download the Report',
+  },
+  Guide: {
+    headline:    (s) => `The ${cap(s.persona)} Guide to ${cap(s.outcome_statement)}`,
+    subheadline: (s) => `${cap(s.pain_statement)} This guide gives you a clear, practical path forward.`,
+    hook:        (s) => `For ${s.persona}`,
+    cta:         ()  => 'Get the Guide',
+  },
+  Checklist: {
+    headline:    (s) => `The ${cap(s.outcome_statement)} Checklist`,
+    subheadline: (s) => `${cap(s.pain_statement)} Work through this checklist to close every gap.`,
+    hook:        (s) => `For ${s.persona}`,
+    cta:         ()  => 'Get the Checklist',
+  },
+  Playbook: {
+    headline:    (s) => `${cap(s.outcome_statement)}: The ${cap(s.persona)} Playbook`,
+    subheadline: (s) => `${cap(s.pain_statement)} This playbook gives your team a repeatable, proven system.`,
+    hook:        (s) => `For ${s.persona}`,
+    cta:         ()  => 'Download the Playbook',
+  },
+  Framework: {
+    headline:    (s) => `A Framework for ${cap(s.outcome_statement)}`,
+    subheadline: (s) => `${cap(s.pain_statement)} Apply this framework to drive consistent, measurable results.`,
+    hook:        (s) => `For ${s.persona}`,
+    cta:         ()  => 'Get the Framework',
+  },
+};
+
+// ── Bullet parsing ────────────────────────────────────────────────────────────
+// Proof points expected as "Short Title: one sentence body".
+// Falls back to splitting on first 4 words if no colon separator found.
+
+function parseBullet(pp: string): { icon: string; title: string; body: string } {
+  const sepIdx = pp.indexOf(': ');
+  if (sepIdx > 0 && sepIdx < 50) {
+    return { icon: 'check', title: pp.slice(0, sepIdx), body: pp.slice(sepIdx + 2) };
+  }
+  const words = pp.split(' ');
+  const title = words.slice(0, Math.min(4, words.length)).join(' ');
+  return { icon: 'check', title, body: pp };
+}
+
+const BULLET_FALLBACKS = [
+  { icon: 'check', title: 'Key Insight',     body: 'Actionable guidance drawn directly from the asset.' },
+  { icon: 'check', title: 'Practical Steps', body: 'Step-by-step guidance you can apply immediately.' },
+  { icon: 'check', title: 'Proven Approach', body: 'Methods validated by leading practitioners.' },
+  { icon: 'check', title: 'Clear Outcomes',  body: 'Measurable results from a focused effort.' },
+];
+
+// ── Copy composition (deterministic) ─────────────────────────────────────────
+
+function composeCopy(slots: Slots): Record<string, unknown> {
+  const validTypes = Object.keys(TEMPLATES);
+  const docType = validTypes.includes(slots.doc_type) ? slots.doc_type : 'Guide';
+  const tmpl    = TEMPLATES[docType];
+
+  const proofPoints = Array.isArray(slots.proof_points) ? slots.proof_points : [];
+  const bullets = proofPoints.slice(0, 4).map(parseBullet);
+  while (bullets.length < 4) {
+    bullets.push(BULLET_FALLBACKS[bullets.length]);
+  }
+
+  return {
+    headline:     tmpl.headline(slots),
+    subheadline:  tmpl.subheadline(slots),
+    hook:         tmpl.hook(slots),
+    bullets,
+    cta:          tmpl.cta(),
+    social_proof: slots.social_context || '',
+    design: {
+      theme:     'light',
+      hero_stat: slots.hero_stat || '',
+      doc_type:  docType,
+    },
+  };
+}
+
+// ── Slot generation system prompt ────────────────────────────────────────────
+
+const SLOT_SYSTEM_PROMPT = `You are a B2B content strategist extracting semantic signals from a campaign brief.
+Output ONLY valid JSON with these exact fields — no markdown fences, no explanation, nothing else.
+
+Field rules:
+- pain_statement: One sentence. The specific challenge this persona faces right now. Max 25 words. Do not start with "I" or "We".
+- outcome_statement: 4-8 words. Noun phrase (no verbs). The primary transformation or result. Lowercase. Example: "consistent pipeline from inbound content".
+- persona: 2-5 words. Job function and seniority. Lowercase. Example: "B2B revenue leaders" or "enterprise IT managers".
+- proof_points: Exactly 4 items. Format each as "Short Title: one concrete sentence about what the reader learns or gets". Title is 2-4 words. Derive only from actual asset content, not generic claims.
+- cta_focus: 2-4 words. The download action. Example: "Download Now" or "Get Instant Access".
+- social_context: Short credibility line. No invented numbers. Example: "Trusted by demand generation teams at leading B2B organisations."
+- hero_stat: A specific statistic or data point found in the asset. If none available, use "". Never invent numbers.
+- doc_type: Infer from asset name and content. Must be exactly one of: Report | Guide | Checklist | Playbook | Framework
+
+{
+  "pain_statement": "string",
+  "outcome_statement": "string",
+  "persona": "string",
+  "proof_points": ["string", "string", "string", "string"],
+  "cta_focus": "string",
+  "social_context": "string",
+  "hero_stat": "string",
+  "doc_type": "Report|Guide|Checklist|Playbook|Framework"
+}`;
+
+// ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function generatePageRouter(request: Request, env: Env, origin: string | null): Promise<Response> {
   const url      = new URL(request.url);
@@ -86,30 +226,30 @@ export async function generatePageRouter(request: Request, env: Env, origin: str
   // Parse JSON fields
   let titles: string[] = [], industries: string[] = [], sizes: string[] = [],
       geo: string[] = [], customQ: { question: string }[] = [];
-  try { titles     = JSON.parse(campaign.titles         || '[]'); } catch {}
-  try { industries = JSON.parse(campaign.industries     || '[]'); } catch {}
-  try { sizes      = JSON.parse(campaign.company_sizes  || '[]'); } catch {}
-  try { geo        = JSON.parse(campaign.geo            || '[]'); } catch {}
+  try { titles     = JSON.parse(campaign.titles          || '[]'); } catch {}
+  try { industries = JSON.parse(campaign.industries      || '[]'); } catch {}
+  try { sizes      = JSON.parse(campaign.company_sizes   || '[]'); } catch {}
+  try { geo        = JSON.parse(campaign.geo             || '[]'); } catch {}
   try { customQ    = JSON.parse(campaign.custom_questions || '[]'); } catch {}
 
-  // Build campaign brief text
+  // Build campaign brief
   const briefLines = [
     `ASSET NAME: ${campaign.asset_name || campaign.name}`,
     campaign.asset_url ? `ASSET URL: ${campaign.asset_url}` : '',
     `CLIENT: ${campaign.client_name || 'Unknown'}`,
     `CAMPAIGN: ${campaign.name}`,
-    titles.length     ? `TARGET TITLES: ${titles.join(', ')}`      : '',
+    titles.length     ? `TARGET TITLES: ${titles.join(', ')}`         : '',
     industries.length ? `TARGET INDUSTRIES: ${industries.join(', ')}` : '',
-    sizes.length      ? `COMPANY SIZE: ${sizes.join(', ')}`         : '',
-    geo.length        ? `GEOGRAPHY: ${geo.join(', ')}`              : '',
-    campaign.notes    ? `CAMPAIGN NOTES: ${campaign.notes}`         : '',
+    sizes.length      ? `COMPANY SIZE: ${sizes.join(', ')}`           : '',
+    geo.length        ? `GEOGRAPHY: ${geo.join(', ')}`                : '',
+    campaign.notes    ? `CAMPAIGN NOTES: ${campaign.notes}`           : '',
     customQ.length
       ? `QUALIFYING QUESTIONS ON FORM:\n${customQ.map(q => `- ${q.question}`).join('\n')}`
       : '',
   ].filter(Boolean).join('\n');
 
-  // Asset fetch disabled — infer copy from campaign brief only
-  const asset: { type: 'none' } = { type: 'none' };
+  // Fetch asset content (for hero_stat extraction)
+  const asset = campaign.asset_url ? await fetchAssetContent(campaign.asset_url) : { type: 'none' as const };
 
   // Build Claude message content
   type ContentBlock =
@@ -126,52 +266,15 @@ export async function generatePageRouter(request: Request, env: Env, origin: str
         source: { type: 'base64', media_type: 'application/pdf', data: asset.base64 },
         title: campaign.asset_name || 'Asset',
       },
-      { type: 'text', text: 'Based on the campaign brief and the PDF asset above, write the landing page copy as specified.' },
+      { type: 'text', text: 'Extract the semantic slots from the campaign brief and PDF asset above.' },
     ];
   } else if (asset.type === 'text') {
-    userContent = `${briefLines}\n\nASSET CONTENT EXTRACT:\n---\n${asset.content}\n---\n\nWrite the landing page copy based on the above.`;
+    userContent = `${briefLines}\n\nASSET CONTENT EXTRACT:\n---\n${asset.content}\n---\n\nExtract the semantic slots from the above.`;
   } else {
-    userContent = `${briefLines}\n\n(Asset file not directly accessible — infer the content and value proposition from the asset name, campaign name, and campaign brief above.)\n\nWrite the landing page copy based on the above.`;
+    userContent = `${briefLines}\n\n(Asset file not directly accessible — infer slots from the asset name, campaign name, and brief above.)\n\nExtract the semantic slots.`;
   }
 
-  const systemPrompt = `You are a senior B2B conversion copywriter specialising in gated content. Your copy makes prospects feel immediately understood — like you've read their mind. You NEVER write generic business copy.
-
-COPY RULES (non-negotiable):
-1. Headline: Name the specific problem or outcome in the reader's own language. No buzzwords. Max 12 words. Make it feel like a slap of recognition.
-2. Subheadline: One concrete sentence completing the promise. What will they be able to DO after reading this?
-3. Hook: A single, sharp sentence articulating the tension the reader is living right now. Make it uncomfortably accurate.
-4. Bullets: Four outcomes. Each title is a verb phrase ("Map Your...", "Stop Losing...", "Find Out Why..."). Each body is ONE specific, concrete result — not a vague benefit. Use "so you can" or "so your team can" to connect insight → outcome.
-5. CTA: Action verb + noun. 3-5 words. Make it feel like getting the thing, not filling a form.
-6. Social proof: Name the specific buyer persona and context. Never invent numbers. Example: "Used by revenue operations leaders at Series B–D SaaS companies."
-7. NO superlatives (comprehensive, powerful, revolutionary, transformative). NO invented statistics. SECOND PERSON only.
-
-DESIGN RULES:
-- theme "dark": technology, cybersecurity, data/analytics, devops, fintech, SaaS, infrastructure
-- theme "light": HR, people ops, recruiting, healthcare, professional services, consulting, marketing, sales enablement
-- hero_stat: Extract the single most compelling number from the asset (e.g. "73% of orgs", "4.2x faster", "$2.8M average cost"). If none found in the asset, leave as empty string — do NOT invent one.
-- doc_type: One word matching the asset format — "Playbook", "Report", "Guide", "Checklist", or "Framework"
-
-Return ONLY valid JSON. No markdown, no explanation, nothing before or after the JSON object:
-{
-  "headline": "string",
-  "subheadline": "string",
-  "hook": "string",
-  "bullets": [
-    { "icon": "emoji", "title": "Verb phrase 3-5 words", "body": "Concrete outcome 1-2 sentences" },
-    { "icon": "emoji", "title": "...", "body": "..." },
-    { "icon": "emoji", "title": "...", "body": "..." },
-    { "icon": "emoji", "title": "...", "body": "..." }
-  ],
-  "cta": "string",
-  "social_proof": "string",
-  "design": {
-    "theme": "dark or light",
-    "hero_stat": "stat string or empty string",
-    "doc_type": "Playbook, Report, Guide, Checklist, or Framework"
-  }
-}`;
-
-  // Call Claude API
+  // Step 1: Call Claude for slots only (compact output, lower token budget)
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -181,8 +284,8 @@ Return ONLY valid JSON. No markdown, no explanation, nothing before or after the
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2400,
-      system: systemPrompt,
+      max_tokens: 600,
+      system: SLOT_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userContent }],
     }),
   });
@@ -195,19 +298,20 @@ Return ONLY valid JSON. No markdown, no explanation, nothing before or after the
   const claudeData = await claudeRes.json() as any;
   const rawText = claudeData.content?.[0]?.text || '';
 
-  let copy: any;
+  // Step 2: Parse slots and compose final copy via templates
+  let slots: Slots;
   try {
-    // Strip markdown fences if present
+    // Strip markdown fences if present, then extract outermost {...} as fallback
     let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    // Fallback: extract the outermost {...} block if direct parse would fail
     if (!cleaned.startsWith('{')) {
       const match = cleaned.match(/\{[\s\S]*\}/);
       if (match) cleaned = match[0];
     }
-    copy = JSON.parse(cleaned);
+    slots = JSON.parse(cleaned);
   } catch {
-    return jsonResponse({ success: false, error: 'Claude returned unparseable JSON', raw: rawText }, 500, origin);
+    return jsonResponse({ success: false, error: 'Claude returned unparseable slot JSON', raw: rawText }, 500, origin);
   }
 
+  const copy = composeCopy(slots);
   return jsonResponse({ success: true, data: copy }, 200, origin);
 }
