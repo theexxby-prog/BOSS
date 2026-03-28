@@ -22,8 +22,8 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
   await dbRun(env.DB, `UPDATE landing_pages SET views=views+1, updated_at=datetime('now') WHERE id=?`, [String(page.id)]);
 
-  // Brand colors
-  const bc = page.brand_color  || '#2563eb';
+  // Brand
+  const bc      = page.brand_color || '#2563eb';
   const logoUrl   = page.logo_url   || '';
   const assetName = page.asset_name || 'Resource';
   const assetUrl  = page.asset_url  || '';
@@ -45,9 +45,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   const hook        = ai?.hook         || '';
   const ctaText     = ai?.cta          || page.cta_text    || 'Download Now';
   const socialProof = ai?.social_proof || '';
-  const docType     = ai?.design?.doc_type  || '';
   const heroStat    = ai?.design?.hero_stat || '';
-  const formTitle   = ai?.cta          || 'Get Your Free Copy';
 
   const defaultBullets = [
     { icon: 'check', title: 'Data-Driven Insights',  body: 'Research-backed analysis with actionable recommendations.' },
@@ -73,19 +71,19 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     </div>`;
   }).join('');
 
-  // SVG checkmark bullet icon (inline, uses brand color)
-  const checkSvg = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex-shrink:0;margin-top:2px">
-    <circle cx="10" cy="10" r="10" fill="${bc}"/>
-    <path d="M6.5 10.5L9 13L13.5 8" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
+  // Outline SVG icons — one per bullet position, generically applicable to B2B content
+  const bulletIcons = [
+    `<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="1.5" stroke="${bc}" stroke-width="1.5"/><rect x="12" y="2" width="8" height="8" rx="1.5" stroke="${bc}" stroke-width="1.5"/><rect x="2" y="12" width="8" height="8" rx="1.5" stroke="${bc}" stroke-width="1.5"/><rect x="12" y="12" width="8" height="8" rx="1.5" stroke="${bc}" stroke-width="1.5"/></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2L3 5.5V10.5c0 4.5 3.5 7.5 8 9 4.5-1.5 8-4.5 8-9V5.5L11 2z" stroke="${bc}" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><polyline points="2,17 8,10 13,14 20,5" stroke="${bc}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,5 20,5 20,11" stroke="${bc}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><ellipse cx="11" cy="8" rx="8" ry="3" stroke="${bc}" stroke-width="1.5"/><path d="M3 8v6c0 1.66 3.58 3 8 3s8-1.34 8-3V8" stroke="${bc}" stroke-width="1.5"/><path d="M3 11c0 1.66 3.58 3 8 3s8-1.34 8-3" stroke="${bc}" stroke-width="1.5"/></svg>`,
+  ];
 
-  const bulletsHtml = bullets.map(b => `
+  const bulletsHtml = bullets.slice(0, 4).map((b, i) => `
     <div class="bullet">
-      ${checkSvg}
-      <div class="bullet-text">
-        <div class="bullet-title">${b.title}</div>
-        <div class="bullet-body">${b.body}</div>
-      </div>
+      <div class="bullet-icon">${bulletIcons[i % 4]}</div>
+      <div class="bullet-title">${b.title}</div>
+      <div class="bullet-body">${b.body}</div>
     </div>`).join('');
 
   const apiBase = url.origin;
@@ -97,22 +95,22 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>${headline}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #F1F5F9;
+      background: #F5F5F3;
       color: #0F172A;
       min-height: 100vh;
     }
 
     /* ── Topbar ── */
     .topbar {
-      height: 56px;
-      background: ${bc};
-      border-bottom: none;
+      height: 52px;
+      background: #fff;
+      border-bottom: 1px solid #E5E7EB;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -121,18 +119,13 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       top: 0;
       z-index: 100;
     }
-    .topbar-left { display: flex; align-items: center; gap: 10px; }
-    .logo { height: 28px; object-fit: contain; filter: brightness(0) invert(1); }
-    .brand-name { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.95); }
-    .asset-name-badge {
+    .topbar-left  { display: flex; align-items: center; gap: 10px; }
+    .logo         { height: 26px; object-fit: contain; }
+    .brand-name   { font-size: 14px; font-weight: 600; color: #0F172A; letter-spacing: 0.01em; }
+    .topbar-asset {
       font-size: 12px; font-weight: 500;
-      color: rgba(255,255,255,0.85);
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      padding: 4px 14px;
-      border-radius: 20px;
-      letter-spacing: 0.01em;
-      max-width: 420px;
+      color: #6B7280;
+      max-width: 380px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -140,159 +133,193 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     /* ── Layout ── */
     .layout {
-      max-width: 1160px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 56px 40px 72px;
+      padding: 64px 40px 80px;
       display: grid;
       grid-template-columns: 3fr 2fr;
-      gap: 56px;
+      gap: 64px;
       align-items: stretch;
     }
 
     /* ── Left: copy ── */
-    .copy { padding-right: 8px; }
+    .copy { padding-right: 8px; display: flex; flex-direction: column; }
 
     .overline {
       font-size: 11px; font-weight: 600;
       color: ${bc};
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      margin-bottom: 14px;
+      margin-bottom: 20px;
     }
 
     h1 {
-      font-size: clamp(30px, 3.8vw, 48px);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(36px, 4.5vw, 68px);
       font-weight: 700;
-      line-height: 1.13;
-      letter-spacing: -0.5px;
-      color: #0F172A;
-      margin-bottom: 18px;
+      line-height: 1.05;
+      letter-spacing: -1px;
+      color: #0A0A0A;
+      margin-bottom: 24px;
     }
 
     .sub {
-      font-size: 16px;
-      color: #475569;
+      font-size: 17px;
+      color: #4B5563;
       line-height: 1.65;
-      max-width: 520px;
-      margin-bottom: 32px;
+      max-width: 540px;
+      margin-bottom: 48px;
     }
 
-    /* ── Hero stat callout ── */
+    /* ── Hero stat ── */
     .stat-callout {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
       background: ${bc}0d;
-      border: 1px solid ${bc}28;
       border-left: 3px solid ${bc};
-      border-radius: 0 8px 8px 0;
-      padding: 14px 20px;
-      margin-bottom: 32px;
-      font-size: 14px;
-      font-weight: 500;
+      padding: 12px 18px;
+      margin-bottom: 40px;
+      font-size: 14px; font-weight: 500;
       color: #374151;
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
-    /* ── Bullets ── */
-    .bullets { display: flex; flex-direction: column; gap: 20px; margin-bottom: 32px; }
-    .bullet  { display: flex; gap: 14px; align-items: flex-start; }
-    .bullet-title { font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 4px; }
-    .bullet-body  { font-size: 14px; color: #475569; line-height: 1.55; }
+    /* ── 2×2 Bullet grid ── */
+    .bullets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px 48px;
+      margin-bottom: 40px;
+    }
+    .bullet { display: flex; flex-direction: column; gap: 8px; }
+    .bullet-icon { color: ${bc}; line-height: 0; }
+    .bullet-title {
+      font-size: 15px; font-weight: 600;
+      color: #0F172A;
+      margin-top: 2px;
+    }
+    .bullet-body {
+      font-size: 14px; color: #6B7280;
+      line-height: 1.6;
+      padding-left: 12px;
+      border-left: 2px solid ${bc}35;
+    }
 
     /* ── Social proof & trust ── */
-    .social-proof { font-size: 12px; color: #94A3B8; line-height: 1.5; margin-bottom: 16px; }
-    .trust-row { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; color: #94A3B8; }
-    .trust-row span::after { content: ' \u00b7 '; }
-    .trust-row span:last-child::after { content: ''; }
+    .social-proof { font-size: 12px; color: #9CA3AF; line-height: 1.5; margin-bottom: 12px; }
+    .trust-row {
+      margin-top: auto;
+      display: flex; flex-wrap: wrap; gap: 20px;
+      font-size: 12px; color: #9CA3AF;
+    }
 
     /* ── Right: form card ── */
     .form-wrap { display: flex; flex-direction: column; }
     .form-card {
       flex: 1;
       background: #fff;
-      border: 1px solid #E2E8F0;
-      border-radius: 16px;
-      box-shadow: 0 4px 32px rgba(15,23,42,0.08), 0 1px 4px rgba(15,23,42,0.04);
-      padding: 36px 32px 32px;
+      border: 1px solid #E5E7EB;
+      border-radius: 4px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+      padding: 40px 36px 36px;
     }
 
-    .form-title { font-size: 20px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
-    .form-sub   { font-size: 13px; color: #64748B; margin-bottom: 24px; line-height: 1.4; }
+    .form-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px; font-weight: 700;
+      color: #0A0A0A; margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+    .form-sub { font-size: 14px; color: #6B7280; margin-bottom: 32px; line-height: 1.5; }
 
-    /* ── Form fields ── */
-    .fg { margin-bottom: 14px; }
+    /* ── Underline form fields ── */
+    .fg { margin-bottom: 24px; }
     .fg label {
       display: block;
       font-size: 11px; font-weight: 600;
-      color: #374151;
+      color: #6B7280;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 5px;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
     }
     .fg input, .fg select {
-      width: 100%; padding: 10px 12px;
-      background: #fff;
-      border: 1.5px solid #E2E8F0;
-      border-radius: 8px;
-      font-size: 14px; color: #0F172A;
+      width: 100%;
+      padding: 6px 0 10px;
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px solid #D1D5DB;
+      border-radius: 0;
+      font-size: 15px; color: #0F172A;
       font-family: inherit;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s;
       appearance: none;
     }
-    .fg input::placeholder { color: #CBD5E1; }
+    .fg input::placeholder { color: #D1D5DB; }
     .fg select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 32px;
+      background-position: right 4px center;
+      padding-right: 24px;
       cursor: pointer;
     }
-    .fg input:hover, .fg select:hover { border-color: #CBD5E1; }
     .fg input:focus, .fg select:focus {
       outline: none;
-      border-color: ${bc};
-      box-shadow: 0 0 0 3px ${bc}22;
+      border-bottom-color: ${bc};
     }
 
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
     /* ── Custom questions divider ── */
     .custom-divider {
       display: flex; align-items: center; gap: 10px;
-      margin: 20px 0 16px;
-      font-size: 11px; font-weight: 600;
-      color: ${bc};
+      margin: 8px 0 20px;
+      font-size: 10px; font-weight: 600;
+      color: #9CA3AF;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.1em;
     }
     .custom-divider::before, .custom-divider::after {
-      content: ''; flex: 1; height: 1px; background: #E2E8F0;
+      content: ''; flex: 1; height: 1px; background: #E5E7EB;
     }
 
     /* ── Submit button ── */
     .btn-submit {
-      width: 100%; padding: 13px;
+      width: 100%; padding: 15px;
       background: ${bc}; color: #fff;
-      border: none; border-radius: 8px;
-      font-size: 15px; font-weight: 600;
+      border: none; border-radius: 3px;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
       cursor: pointer; font-family: inherit;
-      margin-top: 6px;
+      margin-top: 8px;
       transition: filter 0.15s, transform 0.1s;
-      letter-spacing: 0.01em;
     }
     .btn-submit:hover   { filter: brightness(1.08); transform: translateY(-1px); }
     .btn-submit:active  { transform: translateY(0); }
     .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; filter: none; }
 
-    .consent { font-size: 11px; color: #94A3B8; margin-top: 12px; line-height: 1.6; text-align: center; }
+    .consent {
+      font-size: 11px; color: #9CA3AF;
+      margin-top: 16px; line-height: 1.6;
+      text-align: center;
+    }
 
     /* ── Success state ── */
-    .success { text-align: center; padding: 24px 8px 8px; }
-    .success-check { margin-bottom: 20px; }
-    .success-title { font-size: 24px; font-weight: 700; color: #0F172A; margin-bottom: 10px; }
-    .success-body  { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 24px; }
+    .success { text-align: center; padding: 40px 16px 16px; }
+    .success-check { margin-bottom: 24px; }
+    .success-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px; font-weight: 700;
+      color: #0A0A0A; margin-bottom: 12px;
+    }
+    .success-body  { font-size: 15px; color: #4B5563; line-height: 1.6; margin-bottom: 28px; }
     .dl-btn {
-      display: inline-block; padding: 12px 28px;
-      background: ${bc}; color: #fff; border-radius: 8px;
-      text-decoration: none; font-weight: 600; font-size: 14px;
+      display: inline-block; padding: 14px 32px;
+      background: ${bc}; color: #fff; border-radius: 3px;
+      text-decoration: none; font-weight: 600;
+      font-size: 12px; letter-spacing: 0.1em;
+      text-transform: uppercase;
       transition: filter 0.15s;
     }
     .dl-btn:hover { filter: brightness(1.08); }
@@ -300,13 +327,14 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     /* ── Mobile ── */
     @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; gap: 36px; padding: 36px 24px 56px; }
+      .layout { grid-template-columns: 1fr; gap: 40px; padding: 36px 24px 56px; }
       .copy { padding-right: 0; }
+      .bullets { grid-template-columns: 1fr; gap: 24px; }
     }
     @media (max-width: 480px) {
       .topbar { padding: 0 20px; }
-      h1 { letter-spacing: -0.3px; }
-      .form-card { padding: 24px 20px 20px; border-radius: 12px; }
+      h1 { letter-spacing: -0.5px; }
+      .form-card { padding: 28px 20px 24px; }
       .row2 { grid-template-columns: 1fr; gap: 0; }
     }
   </style>
@@ -318,7 +346,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       ${logoUrl ? `<img src="${logoUrl}" class="logo" alt=""/>` : ''}
       ${page.client_name ? `<span class="brand-name">${page.client_name}</span>` : ''}
     </div>
-    <span class="asset-name-badge">${assetName}</span>
+    <span class="topbar-asset">${assetName}</span>
   </header>
 
   <main class="layout">
@@ -327,8 +355,11 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       ${hook ? `<div class="overline">${hook}</div>` : ''}
       <h1>${headline}</h1>
       <p class="sub">${subheadline}</p>
+
       ${heroStat ? `<div class="stat-callout">${heroStat}</div>` : ''}
+
       <div class="bullets">${bulletsHtml}</div>
+
       ${socialProof ? `<p class="social-proof">${socialProof}</p>` : ''}
       <div class="trust-row">
         <span>No spam, ever</span>
@@ -340,14 +371,15 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     <div class="form-wrap">
       <div class="form-card">
         <div id="form-section">
-          <h2 class="form-title">${formTitle}</h2>
-          <p class="form-sub">${assetName}</p>
+          <h2 class="form-title">${ctaText}</h2>
+          <p class="form-sub">Fill in your details to receive the ${assetName} directly.</p>
+
           <form id="lead-form">
             <div class="row2">
               <div class="fg"><label>First Name</label><input type="text" name="first_name" required placeholder="Jane"/></div>
               <div class="fg"><label>Last Name</label><input type="text" name="last_name" required placeholder="Smith"/></div>
             </div>
-            <div class="fg"><label>Business Email</label><input type="email" name="email" required placeholder="jane@company.com"/></div>
+            <div class="fg"><label>Work Email</label><input type="email" name="email" required placeholder="jane@company.com"/></div>
             <div class="row2">
               <div class="fg"><label>Company</label><input type="text" name="company" required placeholder="Acme Inc"/></div>
               <div class="fg"><label>Job Title</label><input type="text" name="title" required placeholder="VP Marketing"/></div>
@@ -359,16 +391,17 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
             ${customQuestions.length ? `<div class="custom-divider"><span>A few quick questions</span></div>${customFieldsHtml}` : ''}
             <button type="submit" class="btn-submit">${ctaText}</button>
           </form>
-          <p class="consent">By downloading, you agree to receive relevant communications. Unsubscribe anytime.</p>
+          <p class="consent">By submitting, you agree to receive relevant communications. Unsubscribe anytime.</p>
         </div>
+
         <div id="success-section" class="success" style="display:none">
           <div class="success-check">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <circle cx="24" cy="24" r="24" fill="${bc}"/>
-              <path d="M15 24.5L21 30.5L33 18" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <circle cx="26" cy="26" r="26" fill="${bc}"/>
+              <path d="M16 26.5L22 33L36 19" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h2 class="success-title">You're all set!</h2>
+          <h2 class="success-title">You're all set.</h2>
           <p class="success-body">Your copy of <strong>${assetName}</strong> is ready to download.</p>
           ${assetUrl
             ? `<a href="${assetUrl}" target="_blank" class="dl-btn">Download Now</a>`
