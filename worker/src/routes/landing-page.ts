@@ -91,18 +91,18 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
     .left { display: grid; grid-template-rows: minmax(340px, 1.25fr) 0.9fr; overflow: hidden; }
 
-    /* Form panel — height:100% forces full grid-cell fill so spacers can center */
+    /* Form panel — fills full height, scrollable, padded */
     .right { display: flex; flex-direction: column; overflow-y: auto; height: 100%; }
-    .right-spacer { flex: 1; min-height: 20px; }
-    .right-inner { padding: 24px 22px; }
-    .form-header { border-radius: 9px; padding: 13px 15px; margin-bottom: 16px; }
-    .form-header-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
-    .form-title { font-size: 14px; font-weight: 700; line-height: 1.3; }
-    .fg { margin-bottom: 9px; }
-    .fg label { display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .right-spacer { flex: 1; min-height: 24px; }
+    .right-inner { padding: 32px 48px; flex: 1; }
+    .form-header { border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; }
+    .form-header-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .form-title { font-size: 17px; font-weight: 700; line-height: 1.3; }
+    .fg { margin-bottom: 12px; }
+    .fg label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .fg input, .fg select {
-      width: 100%; padding: 8px 10px; border-radius: 6px;
-      font-size: 13px; font-family: inherit;
+      width: 100%; padding: 10px 13px; border-radius: 7px;
+      font-size: 14px; font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .fg input:focus, .fg select:focus { outline: none; }
@@ -268,8 +268,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     /* Right: white form panel with shadow */
     .right { background: #ffffff; border-left: 1px solid rgba(17,24,39,.08); box-shadow: -16px 0 42px rgba(2,6,23,.08); }
-    .right-inner { width: min(100%, 360px); margin: 0 auto; border: 1px solid rgba(17,24,39,.07); border-radius: 14px; box-shadow: 0 10px 30px rgba(2,6,23,.06); background: #fff; }
-    .btn-submit { min-height: 46px; border-radius: 10px; }
+    .btn-submit { min-height: 50px; border-radius: 10px; font-size: 16px; }
     .form-header { background: ${bc}0a; border: 1.5px solid ${bc}18; }
     .form-header-label { color: ${bc}; }
     .form-title { color: #1a1a1a; }
@@ -348,30 +347,12 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
           <div class="trust-item"><div class="trust-dot"></div> Instant download</div>
           <div class="trust-item"><div class="trust-dot"></div> Unsubscribe anytime</div>
         </div>
-        <div class="pdf-tease">
-          <div class="pdf-pages">
-            <div class="pdf-page pdf-back"></div>
-            <div class="pdf-page pdf-front">
-              <div class="pfl pfl-h"></div>
-              <div class="pfl" style="width:88%"></div>
-              <div class="pfl" style="width:73%"></div>
-              <div class="pfl" style="width:81%"></div>
-              <div class="pfl" style="width:58%"></div>
-              <div class="pfl pfl-h" style="width:46%;margin-top:8px"></div>
-              <div class="pfl" style="width:92%"></div>
-              <div class="pfl" style="width:67%"></div>
-            </div>
-            <div class="pdf-overlay"></div>
-            <div class="pdf-lock">🔒 Sign up to access the full ${docType}</div>
-          </div>
-        </div>
       </div>
 
     </div>
 
     <!-- Right: form panel -->
     <div class="right">
-      <div class="right-spacer"></div>
       <div class="right-inner">
         <div class="form-header">
           <div class="form-header-label">${docType}</div>
@@ -408,7 +389,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
             : `<p style="color:#10b981;font-weight:600">Your resource will be sent to your inbox shortly.</p>`}
         </div>
       </div>
-      <div class="right-spacer"></div>
       ${socialProof ? `<div class="social-proof">${socialProof}</div>` : ''}
     </div>
 
