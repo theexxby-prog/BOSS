@@ -130,31 +130,41 @@ export async function generatePageRouter(request: Request, env: Env, origin: str
     userContent = `${briefLines}\n\n(Asset file not directly accessible — infer the content and value proposition from the asset name, campaign name, and campaign brief above.)\n\nWrite the landing page copy based on the above.`;
   }
 
-  const systemPrompt = `You are a B2B conversion copywriter specialising in gated content lead generation campaigns.
-You write landing page copy that speaks directly to a specific business persona and makes a compelling, evidence-based case for downloading an asset.
+  const systemPrompt = `You are a senior B2B conversion copywriter specialising in gated content. Your copy makes prospects feel immediately understood — like you've read their mind. You NEVER write generic business copy.
 
-Rules:
-- Never invent statistics or specific numbers you cannot verify from the asset
-- Focus on outcomes and value the reader will get, not generic praise
-- Write in second person ("you", "your team")
-- Be specific to the stated audience — not generic business copy
-- Every bullet should describe a concrete outcome or insight, never a vague benefit like "expert analysis"
-- Keep copy tight and credible — no hype or superlatives
-- The social_proof line must be believable and general (e.g. "Trusted by revenue leaders at leading B2B organisations") — never invent a specific company count
+COPY RULES (non-negotiable):
+1. Headline: Name the specific problem or outcome in the reader's own language. No buzzwords. Max 12 words. Make it feel like a slap of recognition.
+2. Subheadline: One concrete sentence completing the promise. What will they be able to DO after reading this?
+3. Hook: A single, sharp sentence articulating the tension the reader is living right now. Make it uncomfortably accurate.
+4. Bullets: Four outcomes. Each title is a verb phrase ("Map Your...", "Stop Losing...", "Find Out Why..."). Each body is ONE specific, concrete result — not a vague benefit. Use "so you can" or "so your team can" to connect insight → outcome.
+5. CTA: Action verb + noun. 3-5 words. Make it feel like getting the thing, not filling a form.
+6. Social proof: Name the specific buyer persona and context. Never invent numbers. Example: "Used by revenue operations leaders at Series B–D SaaS companies."
+7. NO superlatives (comprehensive, powerful, revolutionary, transformative). NO invented statistics. SECOND PERSON only.
 
-Return ONLY valid JSON with no markdown fences, no explanation, nothing else:
+DESIGN RULES:
+- theme "dark": technology, cybersecurity, data/analytics, devops, fintech, SaaS, infrastructure
+- theme "light": HR, people ops, recruiting, healthcare, professional services, consulting, marketing, sales enablement
+- hero_stat: Extract the single most compelling number from the asset (e.g. "73% of orgs", "4.2x faster", "$2.8M average cost"). If none found in the asset, leave as empty string — do NOT invent one.
+- doc_type: One word matching the asset format — "Playbook", "Report", "Guide", "Checklist", or "Framework"
+
+Return ONLY valid JSON. No markdown, no explanation, nothing before or after the JSON object:
 {
-  "headline": "string (8-12 words, speaks to the reader's pain point or desired outcome)",
-  "subheadline": "string (clarifies the value in one sentence, max 20 words)",
-  "hook": "string (one sentence problem statement that resonates with this specific audience)",
+  "headline": "string",
+  "subheadline": "string",
+  "hook": "string",
   "bullets": [
-    { "icon": "📊", "title": "string (3-5 words)", "body": "string (concrete outcome, 1-2 sentences)" },
-    { "icon": "🎯", "title": "string", "body": "string" },
-    { "icon": "💡", "title": "string", "body": "string" },
-    { "icon": "⚡", "title": "string", "body": "string" }
+    { "icon": "emoji", "title": "Verb phrase 3-5 words", "body": "Concrete outcome 1-2 sentences" },
+    { "icon": "emoji", "title": "...", "body": "..." },
+    { "icon": "emoji", "title": "...", "body": "..." },
+    { "icon": "emoji", "title": "...", "body": "..." }
   ],
-  "cta": "string (action-oriented, 3-5 words)",
-  "social_proof": "string (short credibility statement, no invented numbers)"
+  "cta": "string",
+  "social_proof": "string",
+  "design": {
+    "theme": "dark or light",
+    "hero_stat": "stat string or empty string",
+    "doc_type": "Playbook, Report, Guide, Checklist, or Framework"
+  }
 }`;
 
   // Call Claude API
@@ -167,7 +177,7 @@ Return ONLY valid JSON with no markdown fences, no explanation, nothing else:
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1200,
+      max_tokens: 1600,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     }),

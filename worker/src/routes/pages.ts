@@ -78,6 +78,17 @@ export const pagesRouter: RouteHandler = async (request, env) => {
     return jsonResponse({ success: true }, 200, origin);
   }
 
+  if (request.method === 'PATCH' && id) {
+    const b: any = await request.json();
+    if (b.ai_copy !== undefined) {
+      await dbRun(env.DB,
+        `UPDATE landing_pages SET ai_copy=?, updated_at=datetime('now') WHERE id=?`,
+        [b.ai_copy, String(id)]
+      );
+    }
+    return jsonResponse({ success: true }, 200, origin);
+  }
+
   if (request.method === 'DELETE' && id) {
     await dbRun(env.DB, `DELETE FROM landing_pages WHERE id=?`, [String(id)]);
     return jsonResponse({ success: true }, 200, origin);
