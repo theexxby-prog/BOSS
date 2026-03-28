@@ -141,9 +141,9 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       margin: 0 auto;
       padding: 56px 40px 72px;
       display: grid;
-      grid-template-columns: 1fr 420px;
-      gap: 64px;
-      align-items: start;
+      grid-template-columns: 3fr 2fr;
+      gap: 56px;
+      align-items: stretch;
     }
 
     /* ── Left: copy ── */
@@ -201,13 +201,14 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .trust-row span:last-child::after { content: ''; }
 
     /* ── Right: form card ── */
-    .form-wrap { position: sticky; top: 76px; }
+    .form-wrap { display: flex; flex-direction: column; }
     .form-card {
+      flex: 1;
       background: #fff;
       border: 1px solid #E2E8F0;
       border-radius: 16px;
       box-shadow: 0 4px 32px rgba(15,23,42,0.08), 0 1px 4px rgba(15,23,42,0.04);
-      padding: 32px 28px 28px;
+      padding: 36px 32px 32px;
     }
 
     .form-title { font-size: 20px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
@@ -298,7 +299,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; gap: 36px; padding: 36px 24px 56px; }
       .copy { padding-right: 0; }
-      .form-wrap { position: static; }
     }
     @media (max-width: 480px) {
       .topbar { padding: 0 20px; }
