@@ -179,7 +179,7 @@ Return ONLY valid JSON. No markdown, no explanation, nothing before or after the
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1600,
+      max_tokens: 2400,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     }),
@@ -195,7 +195,13 @@ Return ONLY valid JSON. No markdown, no explanation, nothing before or after the
 
   let copy: any;
   try {
-    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+    // Strip markdown fences if present
+    let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    // Fallback: extract the outermost {...} block if direct parse would fail
+    if (!cleaned.startsWith('{')) {
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (match) cleaned = match[0];
+    }
     copy = JSON.parse(cleaned);
   } catch {
     return jsonResponse({ success: false, error: 'Claude returned unparseable JSON', raw: rawText }, 500, origin);
