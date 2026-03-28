@@ -108,8 +108,8 @@ export async function generatePageRouter(request: Request, env: Env, origin: str
       : '',
   ].filter(Boolean).join('\n');
 
-  // Fetch asset content
-  const asset = campaign.asset_url ? await fetchAssetContent(campaign.asset_url) : { type: 'none' as const };
+  // Asset fetch disabled — infer copy from campaign brief only
+  const asset: { type: 'none' } = { type: 'none' };
 
   // Build Claude message content
   type ContentBlock =
