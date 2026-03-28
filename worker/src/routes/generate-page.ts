@@ -31,11 +31,13 @@ async function fetchAssetContent(assetUrl: string): Promise<
     const contentType = res.headers.get('content-type') || '';
 
     if (contentType.includes('application/pdf')) {
-      // Check size before downloading — reject oversized PDFs rather than truncating (truncation corrupts PDF structure)
+      // Hard cap at 800KB — PDFs are token-dense and the API has a 30k input TPM limit.
+      // Truncating a PDF corrupts it, so we fall back to 'none' if over the cap.
+      const MAX_PDF_BYTES = 800 * 1024;
       const contentLength = parseInt(res.headers.get('content-length') || '0');
-      if (contentLength > 0 && contentLength > 5 * 1024 * 1024) return { type: 'none' };
+      if (contentLength > 0 && contentLength > MAX_PDF_BYTES) return { type: 'none' };
       const buffer = await res.arrayBuffer();
-      if (buffer.byteLength > 5 * 1024 * 1024) return { type: 'none' };
+      if (buffer.byteLength > MAX_PDF_BYTES) return { type: 'none' };
       return { type: 'pdf', base64: uint8ToBase64(new Uint8Array(buffer)) };
     }
 
