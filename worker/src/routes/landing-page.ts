@@ -111,8 +111,8 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     /* ── Topbar ── */
     .topbar {
       height: 56px;
-      background: #fff;
-      border-bottom: 1px solid #E2E8F0;
+      background: ${bc};
+      border-bottom: none;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -122,17 +122,20 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       z-index: 100;
     }
     .topbar-left { display: flex; align-items: center; gap: 10px; }
-    .logo { height: 28px; object-fit: contain; }
-    .brand-name { font-size: 15px; font-weight: 600; color: #0F172A; }
-    .doc-badge {
-      font-size: 11px; font-weight: 600;
-      color: ${bc};
-      background: ${bc}18;
-      border: 1px solid ${bc}30;
-      padding: 4px 12px;
+    .logo { height: 28px; object-fit: contain; filter: brightness(0) invert(1); }
+    .brand-name { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.95); }
+    .asset-name-badge {
+      font-size: 12px; font-weight: 500;
+      color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 4px 14px;
       border-radius: 20px;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
+      letter-spacing: 0.01em;
+      max-width: 420px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* ── Layout ── */
@@ -315,7 +318,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       ${logoUrl ? `<img src="${logoUrl}" class="logo" alt=""/>` : ''}
       ${page.client_name ? `<span class="brand-name">${page.client_name}</span>` : ''}
     </div>
-    <span class="doc-badge">${docType || 'Resource'}</span>
+    <span class="asset-name-badge">${assetName}</span>
   </header>
 
   <main class="layout">
