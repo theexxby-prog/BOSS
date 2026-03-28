@@ -81,10 +81,11 @@ export const pagesRouter: RouteHandler = async (request, env) => {
   if (request.method === 'PATCH' && id) {
     const b: any = await request.json();
     if (b.ai_copy !== undefined) {
-      await dbRun(env.DB,
+      const result = await dbRun(env.DB,
         `UPDATE landing_pages SET ai_copy=?, updated_at=datetime('now') WHERE id=?`,
-        [b.ai_copy, String(id)]
+        [typeof b.ai_copy === 'string' ? b.ai_copy : JSON.stringify(b.ai_copy), String(id)]
       );
+      if (!result.rowsAffected) return jsonResponse({ success: false, error: 'Page not found' }, 404, origin);
     }
     return jsonResponse({ success: true }, 200, origin);
   }

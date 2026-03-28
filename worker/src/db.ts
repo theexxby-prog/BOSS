@@ -23,11 +23,12 @@ export async function dbRun(
   db: D1Database,
   query: string,
   params: unknown[] = []
-): Promise<{ success: boolean; lastRowId: number | null }> {
+): Promise<{ success: boolean; lastRowId: number | null; rowsAffected: number }> {
   const result = await db.prepare(query).bind(...params).run();
   return {
     success: result.success,
     lastRowId: result.meta?.last_row_id ?? null,
+    rowsAffected: result.meta?.changes ?? 0,
   };
 }
 

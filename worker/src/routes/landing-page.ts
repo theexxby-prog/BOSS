@@ -91,7 +91,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       height: 100vh; overflow: hidden; display: flex; flex-direction: column;
     }
     .layout { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
-    .left { display: grid; grid-template-rows: 1fr 1fr; overflow: hidden; }
+    .left { display: grid; grid-template-rows: minmax(340px, 1.25fr) 0.9fr; overflow: hidden; }
 
     /* Form panel — height:100% forces full grid-cell fill so spacers can center */
     .right { display: flex; flex-direction: column; overflow-y: auto; height: 100%; }
@@ -213,8 +213,8 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .doc-badge-year { font-size: 11px; color: rgba(255,255,255,0.25); margin-left: auto; }
 
     .doc-zone h1 {
-      font-size: clamp(24px, 2.8vw, 40px); font-weight: 700;
-      line-height: 1.15; letter-spacing: -0.5px;
+      font-size: clamp(30px, 3.4vw, 52px); font-weight: 700;
+      line-height: 1.05; letter-spacing: -0.02em;
       color: #f8fafc; max-width: 560px; margin-bottom: 12px;
     }
     .hook-text {
@@ -239,12 +239,12 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       position: relative; z-index: 1;
     }
     .subheadline {
-      font-size: 14px; color: rgba(255,255,255,0.45);
-      line-height: 1.65; max-width: 480px; margin-bottom: 18px;
+      font-size: 16px; color: rgba(255,255,255,0.45);
+      line-height: 1.6; max-width: 60ch; margin-bottom: 18px;
     }
     .bullet-icon { background: ${bc}1a; border: 1px solid ${bc}28; }
-    .bullet-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.88); margin-bottom: 1px; }
-    .bullet-body  { font-size: 12px; color: rgba(255,255,255,0.32); line-height: 1.5; }
+    .bullet-title { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.88); margin-bottom: 1px; }
+    .bullet-body  { font-size: 14px; color: rgba(255,255,255,0.32); line-height: 1.55; }
     .trust-row { border-top: 1px solid rgba(255,255,255,0.06); }
     .trust-item { color: rgba(255,255,255,0.25); }
 
@@ -269,7 +269,9 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     }
 
     /* Right: white form panel */
-    .right { background: #ffffff; border-left: 3px solid ${bc}; }
+    .right { background: #ffffff; border-left: 1px solid rgba(17,24,39,.08); box-shadow: -16px 0 42px rgba(2,6,23,.10); }
+    .right-inner { width: min(100%, 360px); margin: 0 auto; border: 1px solid rgba(17,24,39,.08); border-radius: 14px; box-shadow: 0 10px 30px rgba(2,6,23,.08); background: #fff; }
+    .btn-submit { min-height: 46px; border-radius: 10px; }
     .form-header { background: ${bc}0e; border: 1px solid ${bc}20; }
     .form-header-label { color: ${bc}; }
     .form-title { color: #111827; }
@@ -316,12 +318,18 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       font-size: 11px; color: #a0a0a0; font-weight: 500;
     }
 
-    /* Top zone: full brand color — the page's visual identity */
+    /* Top zone: rich gradient on brand color */
     .doc-zone {
-      background: ${bc};
+      background: linear-gradient(165deg, color-mix(in srgb, ${bc} 92%, #fff 8%) 0%, ${bc} 58%, color-mix(in srgb, ${bc} 80%, #000 20%) 100%);
       padding: 40px 52px 36px;
       display: flex; flex-direction: column; justify-content: flex-end;
       position: relative; overflow: hidden;
+    }
+    /* White vignette overlay */
+    .doc-zone::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.20), transparent 55%);
+      pointer-events: none; z-index: 0;
     }
     /* Subtle pattern overlay */
     .doc-zone::after {
@@ -331,7 +339,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     }
     .doc-badge-row {
       display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
     }
     .doc-type-pill {
       font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.95);
@@ -344,23 +352,23 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .doc-badge-year { font-size: 11px; color: rgba(255,255,255,0.45); margin-left: auto; }
 
     .doc-zone h1 {
-      font-size: clamp(24px, 2.8vw, 40px); font-weight: 700;
-      line-height: 1.15; letter-spacing: -0.4px;
+      font-size: clamp(30px, 3.4vw, 52px); font-weight: 700;
+      line-height: 1.05; letter-spacing: -0.02em;
       color: #ffffff; max-width: 560px; margin-bottom: 12px;
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
     }
     .hook-text {
-      font-size: 13px; color: rgba(255,255,255,0.62); font-style: italic;
+      font-size: 13px; color: rgba(255,255,255,0.72); font-style: italic;
       line-height: 1.65; max-width: 520px;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
     }
     ${heroStat ? `
     .hero-stat-block {
       display: inline-flex; align-items: baseline; gap: 8px;
       margin-bottom: 14px; padding: 10px 16px;
       background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);
-      border-radius: 8px; position: relative; z-index: 1;
+      border-radius: 8px; position: relative; z-index: 2;
     }
     .hero-stat-number { font-size: 28px; font-weight: 700; color: #fff; line-height: 1; }
     .hero-stat-label  { font-size: 12px; color: rgba(255,255,255,0.7); }
@@ -374,12 +382,12 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       display: flex; flex-direction: column; justify-content: center;
     }
     .subheadline {
-      font-size: 14px; color: #6b6b6b;
-      line-height: 1.65; max-width: 480px; margin-bottom: 18px;
+      font-size: 16px; color: #6b6b6b;
+      line-height: 1.6; max-width: 60ch; margin-bottom: 18px;
     }
     .bullet-icon { background: ${bc}10; border: 1.5px solid ${bc}20; }
-    .bullet-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 1px; }
-    .bullet-body  { font-size: 12px; color: #8a8a8a; line-height: 1.5; }
+    .bullet-title { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 1px; }
+    .bullet-body  { font-size: 14px; color: #8a8a8a; line-height: 1.55; }
     .trust-row { border-top: 1px solid #ede9e3; }
     .trust-item { color: #b0b0b0; }
 
@@ -403,8 +411,10 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       text-align: center; font-size: 11px; font-weight: 600; color: #8a8a8a; letter-spacing: 0.01em;
     }
 
-    /* Right: white form panel with subtle shadow */
-    .right { background: #ffffff; border-left: 1px solid #e5e2dc; box-shadow: -3px 0 16px rgba(0,0,0,0.04); }
+    /* Right: white form panel with shadow */
+    .right { background: #ffffff; border-left: 1px solid rgba(17,24,39,.08); box-shadow: -16px 0 42px rgba(2,6,23,.08); }
+    .right-inner { width: min(100%, 360px); margin: 0 auto; border: 1px solid rgba(17,24,39,.07); border-radius: 14px; box-shadow: 0 10px 30px rgba(2,6,23,.06); background: #fff; }
+    .btn-submit { min-height: 46px; border-radius: 10px; }
     .form-header { background: ${bc}0a; border: 1.5px solid ${bc}18; }
     .form-header-label { color: ${bc}; }
     .form-title { color: #1a1a1a; }
