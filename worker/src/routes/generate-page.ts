@@ -31,10 +31,12 @@ async function fetchAssetContent(assetUrl: string): Promise<
     const contentType = res.headers.get('content-type') || '';
 
     if (contentType.includes('application/pdf')) {
+      // Check size before downloading — reject oversized PDFs rather than truncating (truncation corrupts PDF structure)
+      const contentLength = parseInt(res.headers.get('content-length') || '0');
+      if (contentLength > 0 && contentLength > 5 * 1024 * 1024) return { type: 'none' };
       const buffer = await res.arrayBuffer();
-      // Cap at 400KB to stay within token limits
-      const bytes = new Uint8Array(buffer).slice(0, 400 * 1024);
-      return { type: 'pdf', base64: uint8ToBase64(bytes) };
+      if (buffer.byteLength > 5 * 1024 * 1024) return { type: 'none' };
+      return { type: 'pdf', base64: uint8ToBase64(new Uint8Array(buffer)) };
     }
 
     if (contentType.includes('text/html') || contentType.includes('text/plain')) {
