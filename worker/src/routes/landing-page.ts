@@ -91,18 +91,17 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
     .left { display: grid; grid-template-rows: minmax(340px, 1.25fr) 0.9fr; overflow: hidden; }
 
-    /* Form panel — fills full height, scrollable, padded */
-    .right { display: flex; flex-direction: column; overflow-y: auto; height: 100%; }
-    .right-spacer { flex: 1; min-height: 24px; }
-    .right-inner { padding: 32px 48px; flex: 1; }
-    .form-header { border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; }
-    .form-header-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
-    .form-title { font-size: 17px; font-weight: 700; line-height: 1.3; }
-    .fg { margin-bottom: 12px; }
-    .fg label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    /* Form panel — vertically centered, capped width */
+    .right { display: flex; flex-direction: column; justify-content: center; overflow-y: auto; height: 100%; }
+    .right-inner { padding: 48px 56px; width: 100%; max-width: 580px; margin: 0 auto; }
+    .form-header { border-radius: 10px; padding: 18px 20px; margin-bottom: 24px; }
+    .form-header-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; }
+    .form-title { font-size: 20px; font-weight: 700; line-height: 1.3; }
+    .fg { margin-bottom: 14px; }
+    .fg label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
     .fg input, .fg select {
-      width: 100%; padding: 10px 13px; border-radius: 7px;
-      font-size: 14px; font-family: inherit;
+      width: 100%; padding: 11px 14px; border-radius: 8px;
+      font-size: 15px; font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .fg input:focus, .fg select:focus { outline: none; }
@@ -268,7 +267,8 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
     /* Right: white form panel with shadow */
     .right { background: #ffffff; border-left: 1px solid rgba(17,24,39,.08); box-shadow: -16px 0 42px rgba(2,6,23,.08); }
-    .btn-submit { min-height: 50px; border-radius: 10px; font-size: 16px; }
+    .btn-submit { min-height: 54px; border-radius: 10px; font-size: 17px; margin-top: 8px; }
+    .consent { font-size: 12px; margin-top: 10px; line-height: 1.5; text-align: center; }
     .form-header { background: ${bc}0a; border: 1.5px solid ${bc}18; }
     .form-header-label { color: ${bc}; }
     .form-title { color: #1a1a1a; }
@@ -388,8 +388,8 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
             ? `<a href="${assetUrl}" target="_blank" class="dl-btn">⬇ Download Now</a>`
             : `<p style="color:#10b981;font-weight:600">Your resource will be sent to your inbox shortly.</p>`}
         </div>
+        ${socialProof ? `<div class="social-proof">${socialProof}</div>` : ''}
       </div>
-      ${socialProof ? `<div class="social-proof">${socialProof}</div>` : ''}
     </div>
 
   </div>
