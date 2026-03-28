@@ -47,7 +47,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   const socialProof = esc(ai?.social_proof || '');
   const heroStat    = esc(ai?.design?.hero_stat || '');
   const docType     = esc(ai?.design?.doc_type  || 'Guide');
-  const isDark      = (ai?.design?.theme !== 'light');
 
   const defaultBullets = [
     { icon: '📊', title: 'Data-Driven Insights',   body: 'Research-backed analysis with actionable recommendations.' },
@@ -71,7 +70,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   }).join('');
 
   const hasLogo = logoUrl && (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
-  const hasPdf  = assetUrl && /\.pdf(\?|$)/i.test(assetUrl);
   const apiBase = url.origin;
 
   const bulletsHtml = bullets.map(b => `
@@ -90,7 +88,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       height: 100vh; overflow: hidden; display: flex; flex-direction: column;
     }
-    .layout { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
+    .layout { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
     .left { display: grid; grid-template-rows: minmax(340px, 1.25fr) 0.9fr; overflow: hidden; }
 
     /* Form panel — height:100% forces full grid-cell fill so spacers can center */
@@ -154,149 +152,6 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
     }
   `;
 
-  // ─── DARK THEME (tech / cyber / data / SaaS / fintech) ────────────────────
-  // Top zone: dark with brand gradient — doc badge + big headline + hook
-  // Bottom zone: dark — subheadline + bullets
-  const darkCss = `
-    body { background: #0d1117; }
-
-    .topbar {
-      height: 52px; min-height: 52px; background: ${bc};
-      display: flex; align-items: center; padding: 0 36px; gap: 10px; flex-shrink: 0;
-    }
-    .topbar img { height: 24px; object-fit: contain; max-width: 100px; filter: brightness(10); }
-    .brand-initial {
-      width: 26px; height: 26px; border-radius: 5px;
-      background: rgba(255,255,255,0.22); color: #fff;
-      font-size: 12px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .topbar .brand { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.95); }
-    .topbar .asset-pill {
-      margin-left: auto; display: flex; align-items: center; gap: 5px;
-      font-size: 11px; color: rgba(255,255,255,0.6);
-    }
-
-    /* Left panel: dark with gradient */
-    .left { background: #0d1117; position: relative; }
-    .left::before {
-      content: ''; position: absolute; inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at -5% 15%, ${bc}55, transparent 55%),
-        radial-gradient(ellipse 60% 50% at 105% 90%, ${bc}22, transparent 55%);
-      pointer-events: none; z-index: 0;
-    }
-    .left::after {
-      content: ''; position: absolute; inset: 0;
-      background-image: radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
-      background-size: 28px 28px; pointer-events: none; z-index: 0;
-    }
-
-    /* Top zone: headline + badge + hook */
-    .doc-zone {
-      padding: 40px 52px 32px;
-      display: flex; flex-direction: column; justify-content: flex-end;
-      position: relative; z-index: 1;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .doc-badge-row {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;
-    }
-    .doc-type-pill {
-      font-size: 10px; font-weight: 700; color: ${bc};
-      text-transform: uppercase; letter-spacing: 0.12em;
-      background: ${bc}18; border: 1px solid ${bc}30;
-      padding: 3px 10px; border-radius: 4px;
-    }
-    .doc-badge-sep { width: 3px; height: 3px; border-radius: 50%; background: rgba(255,255,255,0.2); }
-    .doc-badge-client { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.4); }
-    .doc-badge-year { font-size: 11px; color: rgba(255,255,255,0.25); margin-left: auto; }
-
-    .doc-zone h1 {
-      font-size: clamp(30px, 3.4vw, 52px); font-weight: 700;
-      line-height: 1.05; letter-spacing: -0.02em;
-      color: #f8fafc; max-width: 560px; margin-bottom: 12px;
-    }
-    .hook-text {
-      font-size: 13px; color: rgba(255,255,255,0.38); font-style: italic;
-      line-height: 1.6; max-width: 520px;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    ${heroStat ? `
-    .hero-stat-block {
-      display: inline-flex; align-items: baseline; gap: 8px;
-      margin-bottom: 14px; padding: 10px 16px;
-      background: ${bc}18; border: 1px solid ${bc}28; border-radius: 8px;
-    }
-    .hero-stat-number { font-size: 28px; font-weight: 700; color: #f8fafc; line-height: 1; }
-    .hero-stat-label  { font-size: 12px; color: rgba(255,255,255,0.45); }
-    ` : ''}
-
-    /* Bottom zone: subheadline + bullets */
-    .copy-zone {
-      padding: 28px 52px 32px;
-      display: flex; flex-direction: column; justify-content: center;
-      position: relative; z-index: 1;
-    }
-    .subheadline {
-      font-size: 16px; color: rgba(255,255,255,0.45);
-      line-height: 1.6; max-width: 60ch; margin-bottom: 18px;
-    }
-    .bullet-icon { background: ${bc}1a; border: 1px solid ${bc}28; }
-    .bullet-title { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.88); margin-bottom: 1px; }
-    .bullet-body  { font-size: 14px; color: rgba(255,255,255,0.32); line-height: 1.55; }
-    .trust-row { border-top: 1px solid rgba(255,255,255,0.06); }
-    .trust-item { color: rgba(255,255,255,0.25); }
-
-    /* PDF preview tease */
-    .pdf-tease { margin-top: 16px; }
-    .pdf-pages { position: relative; padding-top: 3px; }
-    .pdf-page { padding: 11px 14px; border-radius: 7px; display: flex; flex-direction: column; gap: 5px; }
-    .pdf-back {
-      position: absolute; top: 0; left: 4px; right: 4px; bottom: 0;
-      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 7px;
-    }
-    .pdf-front { position: relative; z-index: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
-    .pfl { height: 6px; border-radius: 2px; background: rgba(255,255,255,0.09); }
-    .pfl-h { height: 9px; background: rgba(255,255,255,0.14); margin-bottom: 3px; }
-    .pdf-overlay {
-      position: absolute; inset: 0; z-index: 2; border-radius: 7px;
-      background: linear-gradient(to bottom, transparent 20%, rgba(13,17,23,0.92) 75%);
-    }
-    .pdf-lock {
-      position: absolute; bottom: 9px; left: 0; right: 0; z-index: 3;
-      text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); letter-spacing: 0.01em;
-    }
-
-    /* Right: white form panel */
-    .right { background: #ffffff; border-left: 1px solid rgba(17,24,39,.08); box-shadow: -16px 0 42px rgba(2,6,23,.10); }
-    .right-inner { width: min(100%, 360px); margin: 0 auto; border: 1px solid rgba(17,24,39,.08); border-radius: 14px; box-shadow: 0 10px 30px rgba(2,6,23,.08); background: #fff; }
-    .btn-submit { min-height: 46px; border-radius: 10px; }
-    .form-header { background: ${bc}0e; border: 1px solid ${bc}20; }
-    .form-header-label { color: ${bc}; }
-    .form-title { color: #111827; }
-    .fg label { color: #6b7280; }
-    .fg input, .fg select {
-      background: #f9fafb; border: 1px solid #e5e7eb; color: #111827;
-    }
-    .fg input::placeholder { color: #9ca3af; }
-    .fg input:focus, .fg select:focus { border-color: ${bc}; box-shadow: 0 0 0 3px ${bc}1a; }
-    .fg select option { background: #fff; color: #111827; }
-    .divider { border-top: 1px solid #f3f4f6; }
-    .consent { color: #9ca3af; }
-    .social-proof { border-top: 1px solid #f0f0f0; color: #9ca3af; }
-    .success p { color: #6b7280; }
-
-    @media (max-width: 768px) {
-      .doc-zone { padding: 28px 20px 20px; }
-      .copy-zone { padding: 20px 20px 28px; }
-      .right { border-left: none; border-top: 3px solid ${bc}; }
-    }
-  `;
-
-  // ─── LIGHT THEME (HR / health / consulting / professional services) ─────────
-  // Top zone: FULL brand color — overline + big headline + hook in white
-  // Bottom zone: white — subheadline + bullets
   const lightCss = `
     body { background: #f7f6f3; }
 
@@ -447,7 +302,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     ${baseCss}
-    ${isDark ? darkCss : lightCss}
+    ${lightCss}
   </style>
 </head>
 <body>
@@ -493,7 +348,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
           <div class="trust-item"><div class="trust-dot"></div> Instant download</div>
           <div class="trust-item"><div class="trust-dot"></div> Unsubscribe anytime</div>
         </div>
-        ${hasPdf ? `<div class="pdf-tease">
+        <div class="pdf-tease">
           <div class="pdf-pages">
             <div class="pdf-page pdf-back"></div>
             <div class="pdf-page pdf-front">
@@ -509,7 +364,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
             <div class="pdf-overlay"></div>
             <div class="pdf-lock">🔒 Sign up to access the full ${docType}</div>
           </div>
-        </div>` : ''}
+        </div>
       </div>
 
     </div>
