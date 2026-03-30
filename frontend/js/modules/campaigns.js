@@ -113,7 +113,7 @@ async function renderCampaigns() {
 // Request Card
 // ═══════════════════════════════════════════════════════════
 function renderRequestCard(c, clientMap) {
-  let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[];
+  let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[], seqList=[];
   try { tal=JSON.parse(c.tal||'[]'); } catch {}
   try { suppression=JSON.parse(c.suppression_list||'[]'); } catch {}
   try { customQ=JSON.parse(c.custom_questions||'[]'); } catch {}
@@ -121,6 +121,11 @@ function renderRequestCard(c, clientMap) {
   try { industries=JSON.parse(c.industries||'[]'); } catch {}
   try { titles=JSON.parse(c.titles||'[]'); } catch {}
   try { sizes=JSON.parse(c.company_sizes||'[]'); } catch {}
+  try { seqList=JSON.parse(c.email_sequences||'[]'); } catch {}
+
+  // Cache campaign for sequence editor access
+  window._campaignCache = window._campaignCache || {};
+  window._campaignCache[c.id] = c;
 
   const bc = c.brand_color||'#2563eb', bs = c.brand_color_secondary||'#1e40af', ba = c.brand_accent||'#3b82f6';
   const budget = (c.target||0)*(c.cpl||0);
@@ -157,7 +162,15 @@ function renderRequestCard(c, clientMap) {
       </div>
       ${customQ.length?`<div class="rq-questions"><div class="request-label" style="margin-bottom:8px">Custom Qualifying Questions</div>${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><div><span class="fs13">${q.question}</span>${q.answer?`<div class="fs12" style="color:var(--text-tertiary);margin-top:2px">Expected: ${q.answer}</div>`:''}</div></div>`).join('')}</div>`:''}
       ${c.notes?`<div class="rq-notes"><div class="request-label">Client Notes</div><div class="fs13" style="color:var(--text-tertiary);line-height:1.5;margin-top:4px">${c.notes}</div></div>`:''}
-      <div class="rq-actions">
+      <!-- Email Sequences inline on request card -->
+      <div style="border-top:0.5px solid var(--border);margin-top:16px;padding-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--blue-600)">Email Sequences</div>
+          <button class="btn btn-ghost btn-sm" onclick="openSequenceEditor(${c.id})">+ Add Persona Track</button>
+        </div>
+        <div id="seq-list-${c.id}">${renderSequenceList(seqList, c.id)}</div>
+      </div>
+      <div class="rq-actions" style="margin-top:14px">
         <button class="btn btn-pri btn-sm" onclick="deployLandingPage(${c.id})" style="flex:1">🚀 Deploy Landing Page</button>
         <button class="btn btn-ghost btn-sm" onclick="editCampaignRequest(${c.id})">Edit</button>
       </div>
@@ -883,15 +896,13 @@ function resolveVars(text, lead, assetName) {
 
 function renderSequenceList(sequences, campaignId) {
   if (!sequences.length) {
-    return `<div style="padding:20px 24px;color:var(--text-tertiary)" class="fs13">
-      No email sequences yet. Add a persona track to define personalised outreach sequences for different seniority levels.
-    </div>`;
+    return `<div class="fs12" style="color:var(--text-tertiary);padding:4px 0">No persona tracks yet. Add one above to define personalised email sequences by seniority level.</div>`;
   }
   return sequences.map((seq, idx) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:0.5px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-100);display:flex;align-items:center;justify-content:center">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--blue-600)" stroke-width="1.5" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--blue-100);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--blue-600)" stroke-width="1.5" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         </div>
         <div>
           <div class="fw5 fs13">${seq.name}</div>
