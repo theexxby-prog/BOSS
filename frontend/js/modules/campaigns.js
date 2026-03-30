@@ -56,7 +56,7 @@ async function renderCampaigns() {
         <div class="cmp-card-top">
           <div class="cmp-card-identity">
             ${c.logo_url
-              ? `<img src="${c.logo_url}" class="cmp-card-logo"/>`
+              ? `<img src="${c.logo_url}" class="cmp-card-logo" onerror="this.style.display='none'"/>`
               : `<div class="cmp-card-logo-ph" style="background:${bc}22;color:${bc}">${(c.name||'C')[0]}</div>`}
             <div>
               <div class="cmp-card-name">${c.name}</div>
@@ -132,7 +132,7 @@ function renderRequestCard(c, clientMap) {
 
   return `<div class="card rq-card" style="padding:0;overflow:hidden">
     <div class="rq-header" style="background:var(--blue-600)">
-      ${c.logo_url ? `<img src="${c.logo_url}" class="rq-logo"/>` : ''}
+      ${c.logo_url ? `<img src="${c.logo_url}" class="rq-logo" onerror="this.parentElement.querySelector('.rq-logo-ph')?.style.setProperty('display','flex');this.style.display='none'"/><div class="rq-logo-ph" style="display:none;width:36px;height:36px;border-radius:var(--radius-md);background:rgba(255,255,255,0.2);color:#fff;font-size:13px;font-weight:500;align-items:center;justify-content:center;flex-shrink:0">${(c.name||'C')[0].toUpperCase()}</div>` : ''}
       <div class="rq-header-text">
         <div class="rq-name">${c.name}</div>
         <div class="rq-client">${clientMap[c.client_id]||'Unknown Client'}</div>
@@ -234,7 +234,7 @@ async function renderCampaignDetail(campaignId) {
     <!-- Header -->
     <div class="cd-hdr" style="background:var(--blue-600)">
       <div style="display:flex;align-items:center;gap:12px">
-        ${c.logo_url ? `<img src="${c.logo_url}" class="cd-logo"/>` : ''}
+        ${c.logo_url ? `<img src="${c.logo_url}" class="cd-logo" onerror="this.style.display='none'"/>` : ''}
         <div><div class="cd-title">${c.name}</div><div class="cd-sub">${clientMap[c.client_id]||'—'}</div></div>
       </div>
       ${statusBadge(c.status)}

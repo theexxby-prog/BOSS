@@ -348,7 +348,7 @@ export async function landingPageRenderer(request: Request, env: Env): Promise<R
 
   <header class="topbar">
     <div class="topbar-left">
-      ${logoUrl ? `<img src="${logoUrl}" class="logo" alt=""/>` : ''}
+      ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="" onerror="this.style.display='none'"/>` : ''}
       ${page.client_name ? `<span class="brand-name">${page.client_name}</span>` : ''}
     </div>
     <span class="topbar-asset">${assetName}</span>
