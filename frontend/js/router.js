@@ -51,7 +51,7 @@ function navigate(id) {
   // Preserve drilldown state across module switches; only reset on explicit back-nav
   if (typeof State !== 'undefined') {
     // Always land on the active tab when clicking Campaigns in the sidebar
-    if (id === 'campaigns') State.campaignsTab = 'active';
+    if (id === 'campaigns') { State.campaignsTab = 'active'; State.viewingCampaign = null; }
     else State.campaignsTab = State.campaignsTab || 'active';
   }
   renderModule(id);
