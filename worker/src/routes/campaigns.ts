@@ -70,8 +70,8 @@ export async function campaignsRouter(request: Request, env: Env, origin: string
       const values: unknown[] = [];
       const allowed = ['name', 'status', 'target', 'delivered', 'accepted', 'rejected', 'cpl', 'asset_name', 'asset_url', 'start_date', 'end_date', 'notes',
         'tal', 'suppression_list', 'custom_questions', 'brand_color', 'brand_color_secondary', 'brand_accent', 'logo_url',
-        'geo', 'industries', 'titles', 'company_sizes'];
-      const jsonFields = ['tal', 'suppression_list', 'custom_questions', 'geo', 'industries', 'titles', 'company_sizes'];
+        'geo', 'industries', 'titles', 'company_sizes', 'email_sequences'];
+      const jsonFields = ['tal', 'suppression_list', 'custom_questions', 'geo', 'industries', 'titles', 'company_sizes', 'email_sequences'];
       for (const key of allowed) {
         if (key in body) {
           fields.push(`${key} = ?`);

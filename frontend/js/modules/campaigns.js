@@ -178,7 +178,7 @@ async function renderCampaignDetail(campaignId) {
   const pages = (pRes.success ? pRes.data : []).filter(p => p.campaign_id === c.id);
   const inv   = invRes.success ? invRes.data : null;
 
-  let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[], coRevenue=[];
+  let tal=[], suppression=[], customQ=[], geo=[], industries=[], titles=[], sizes=[], coRevenue=[], sequences=[];
   try { tal=JSON.parse(c.tal||'[]'); } catch {}
   try { suppression=JSON.parse(c.suppression_list||'[]'); } catch {}
   try { customQ=JSON.parse(c.custom_questions||'[]'); } catch {}
@@ -187,10 +187,13 @@ async function renderCampaignDetail(campaignId) {
   try { titles=JSON.parse(c.titles||'[]'); } catch {}
   try { sizes=JSON.parse(c.company_sizes||'[]'); } catch {}
   try { coRevenue=JSON.parse(c.company_revenue||'[]'); } catch {}
+  try { sequences=JSON.parse(c.email_sequences||'[]'); } catch {}
 
-  // Store TAL for modal access
+  // Store campaign + TAL for modal access
   window._talCache = window._talCache || {};
   window._talCache[c.id] = tal;
+  window._campaignCache = window._campaignCache || {};
+  window._campaignCache[c.id] = c;
 
   const bc = c.brand_color||'#2563eb', bs = c.brand_color_secondary||'#1e40af', ba = c.brand_accent||'#3b82f6';
   const pct = Math.min(100, Math.round(((c.delivered||0) / Math.max(c.target, 1)) * 100));
@@ -333,6 +336,20 @@ async function renderCampaignDetail(campaignId) {
 
     </div>
 
+    <!-- Email Sequences -->
+    <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--blue-600);margin-bottom:2px">Instantly Integration</div>
+          <div class="fw5 fs14">Email Sequences</div>
+        </div>
+        <button class="btn btn-pri btn-sm" onclick="openSequenceEditor(${c.id})">+ Add Persona Track</button>
+      </div>
+      <div id="seq-list-${c.id}" style="padding:4px 0">
+        ${renderSequenceList(sequences, c.id)}
+      </div>
+    </div>
+
     ${c.status==='draft'?`<div class="rq-actions" style="margin-top:12px">
       <button class="btn btn-pri btn-sm" onclick="deployLandingPage(${c.id})" style="flex:1">🚀 Deploy Landing Page</button>
       <button class="btn btn-ghost btn-sm" onclick="editCampaignRequest(${c.id})">Edit</button>
@@ -411,9 +428,12 @@ function showCopyPreviewModal(c, copy) {
   const existing = document.getElementById('preview-modal-overlay');
   if (existing) existing.remove();
 
+  const bc = c.brand_color || '#2563eb';
+  const checkSvg = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="10" cy="10" r="9" stroke="${bc}" stroke-width="1.5"/><polyline points="6,10 9,13 14,7" stroke="${bc}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
   const bulletsHtml = (copy.bullets || []).map(b =>
     `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)">
-      <span style="font-size:18px;flex-shrink:0">${b.icon}</span>
+      ${checkSvg}
       <div>
         <div class="fw5 fs13">${b.title}</div>
         <div class="fs12" style="color:var(--text-secondary);margin-top:2px;line-height:1.5">${b.body}</div>
@@ -427,10 +447,13 @@ function showCopyPreviewModal(c, copy) {
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
   overlay.innerHTML = `<div class="modal-box" style="max-width:560px;width:95vw;text-align:left;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div>
-        <div class="page-overline">AI Generated Copy</div>
-        <div class="fw5 fs16">Landing Page Preview</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${c.logo_url ? `<img src="${c.logo_url}" style="height:24px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'"/>` : ''}
+        <div>
+          <div class="page-overline">AI Generated Copy</div>
+          <div class="fw5 fs16">Landing Page Preview</div>
+        </div>
       </div>
       <button class="btn-icon" onclick="document.getElementById('preview-modal-overlay').remove()">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -841,3 +864,354 @@ window.submitNewCampaign          = submitNewCampaign;
 window.submitEditCampaign         = submitEditCampaign;
 window.generateInvoiceForCampaign = generateInvoiceForCampaign;
 window.completeCampaignAction     = completeCampaignAction;
+
+// ═══════════════════════════════════════════════════════════
+// Email Sequence Builder
+// ═══════════════════════════════════════════════════════════
+
+// Substitute {{variables}} with sample lead data for preview
+function resolveVars(text, lead, assetName) {
+  return (text || '')
+    .replace(/\{\{first_name\}\}/g, lead.first_name)
+    .replace(/\{\{last_name\}\}/g, lead.last_name)
+    .replace(/\{\{company\}\}/g, lead.company)
+    .replace(/\{\{title\}\}/g, lead.title)
+    .replace(/\{\{industry\}\}/g, lead.industry)
+    .replace(/\{\{asset_name\}\}/g, assetName || 'our latest report')
+    .replace(/\{\{asset_downloaded\}\}/g, assetName || 'the report');
+}
+
+function renderSequenceList(sequences, campaignId) {
+  if (!sequences.length) {
+    return `<div style="padding:20px 24px;color:var(--text-tertiary)" class="fs13">
+      No email sequences yet. Add a persona track to define personalised outreach sequences for different seniority levels.
+    </div>`;
+  }
+  return sequences.map((seq, idx) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-100);display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--blue-600)" stroke-width="1.5" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div>
+          <div class="fw5 fs13">${seq.name}</div>
+          <div class="fs11" style="color:var(--text-tertiary);margin-top:1px">${seq.keywords.join(', ')} · ${seq.steps.length} step${seq.steps.length!==1?'s':''}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="openSequenceEditor(${campaignId},${idx})">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="previewSequenceEmail(${campaignId},${idx},0)">Preview</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red-600)" onclick="deleteSequenceTrack(${campaignId},${idx})">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function openSequenceEditor(campaignId, trackIdx) {
+  const existing = document.getElementById('seq-editor-overlay');
+  if (existing) existing.remove();
+
+  const cRes = window._campaignCache?.[campaignId];
+  let sequences = [];
+  if (cRes) { try { sequences = JSON.parse(cRes.email_sequences || '[]'); } catch {} }
+
+  const isEdit = trackIdx !== undefined;
+  const track = isEdit ? sequences[trackIdx] : {
+    name: '', keywords: [], steps: [
+      { day: 0, subject: 'Quick question for {{company}}', body: 'Hi {{first_name}},\n\nI came across {{company}} while researching companies in the {{industry}} space — I noticed you recently downloaded our {{asset_name}}.\n\nI wanted to reach out personally and see if you had any questions or if there\'s a use case we could explore together.\n\nWould you be open to a 15-minute call this week?\n\nBest,\n[Your Name]' },
+      { day: 3, subject: 'Re: Quick question for {{company}}', body: 'Hi {{first_name}},\n\nJust following up on my note from a few days ago — I know things get busy.\n\nGiven your role at {{company}}, I thought our {{asset_name}} might be particularly relevant to what you\'re working on.\n\nHappy to send over a few specific sections if that would be helpful.\n\nBest,\n[Your Name]' },
+      { day: 7, subject: 'Last note — {{company}}', body: 'Hi {{first_name}},\n\nI\'ll keep this short. If now isn\'t the right time, no worries at all — I\'ll leave it here.\n\nIf things change and you\'d like to connect, feel free to book time directly: [calendar link]\n\nBest,\n[Your Name]' }
+    ]
+  };
+
+  const stepsHtml = (track.steps || []).map((step, i) => `
+    <div class="seq-step" id="seq-step-${i}" style="border:0.5px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden">
+      <div style="background:var(--bg-muted);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border)">
+        <span class="fs12 fw5">Step ${i+1} — Day ${step.day}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="seqPreviewStep(${campaignId},${i})">Preview</button>
+          ${i > 0 ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px;color:var(--red-600)" onclick="seqRemoveStep(${i})">✕</button>` : ''}
+        </div>
+      </div>
+      <div style="padding:12px 14px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <label class="fs11 fw5" style="color:var(--text-tertiary);width:52px;flex-shrink:0">Day</label>
+          <input type="number" class="form-input" style="width:80px" value="${step.day}" data-step="${i}" data-field="day" min="0"/>
+          <label class="fs11 fw5" style="color:var(--text-tertiary);margin-left:8px;width:52px;flex-shrink:0">Subject</label>
+          <input type="text" class="form-input" style="flex:1" value="${step.subject.replace(/"/g,'&quot;')}" data-step="${i}" data-field="subject" placeholder="Email subject line…"/>
+        </div>
+        <textarea class="form-input" style="width:100%;height:140px;font-family:monospace;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box" data-step="${i}" data-field="body" placeholder="Email body…">${step.body.replace(/</g,'&lt;')}</textarea>
+      </div>
+    </div>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'seq-editor-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:680px;width:96vw;text-align:left;max-height:92vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div class="page-overline">Email Sequences</div>
+          <div class="fw5 fs16">${isEdit ? 'Edit' : 'New'} Persona Track</div>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('seq-editor-overlay').remove()">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px">
+        <div class="fs11 fw5" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Persona Definition</div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <div style="flex:1">
+            <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Track Name</label>
+            <input id="seq-track-name" type="text" class="form-input" value="${track.name.replace(/"/g,'&quot;')}" placeholder="e.g. C-Suite Track"/>
+          </div>
+        </div>
+        <div>
+          <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Title Keywords (comma-separated — leads whose title contains any of these get this sequence)</label>
+          <input id="seq-keywords" type="text" class="form-input" value="${track.keywords.join(', ')}" placeholder="e.g. CEO, CTO, Chief, President"/>
+        </div>
+        <div class="fs11" style="color:var(--text-tertiary);margin-top:8px">Available variables: <code>{{first_name}}</code> <code>{{last_name}}</code> <code>{{company}}</code> <code>{{title}}</code> <code>{{industry}}</code> <code>{{asset_name}}</code></div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Email Steps</div>
+        <button class="btn btn-ghost btn-sm" onclick="seqAddStep()">+ Add Step</button>
+      </div>
+
+      <div id="seq-steps-container">${stepsHtml}</div>
+
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-pri" style="flex:1" onclick="saveSequenceTrack(${campaignId},${isEdit ? trackIdx : -1})">
+          ${isEdit ? 'Save Changes' : 'Add Track'}
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('seq-editor-overlay').remove()">Cancel</button>
+      </div>
+    </div>`;
+
+  window._seqEditorSteps = track.steps.map(s => ({ ...s }));
+  document.body.appendChild(overlay);
+}
+
+function seqAddStep() {
+  const steps = window._seqEditorSteps || [];
+  const lastDay = steps.length ? steps[steps.length-1].day : 0;
+  const newStep = { day: lastDay + 3, subject: '', body: '' };
+  steps.push(newStep);
+  window._seqEditorSteps = steps;
+  const i = steps.length - 1;
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="seq-step" id="seq-step-${i}" style="border:0.5px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden">
+      <div style="background:var(--bg-muted);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border)">
+        <span class="fs12 fw5">Step ${i+1} — Day ${newStep.day}</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="seqPreviewStep(null,${i})">Preview</button>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px;color:var(--red-600)" onclick="seqRemoveStep(${i})">✕</button>
+        </div>
+      </div>
+      <div style="padding:12px 14px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <label class="fs11 fw5" style="color:var(--text-tertiary);width:52px;flex-shrink:0">Day</label>
+          <input type="number" class="form-input" style="width:80px" value="${newStep.day}" data-step="${i}" data-field="day" min="0"/>
+          <label class="fs11 fw5" style="color:var(--text-tertiary);margin-left:8px;width:52px;flex-shrink:0">Subject</label>
+          <input type="text" class="form-input" style="flex:1" value="" data-step="${i}" data-field="subject" placeholder="Email subject line…"/>
+        </div>
+        <textarea class="form-input" style="width:100%;height:140px;font-family:monospace;font-size:12px;line-height:1.6;resize:vertical;box-sizing:border-box" data-step="${i}" data-field="body" placeholder="Email body…"></textarea>
+      </div>
+    </div>`;
+  document.getElementById('seq-steps-container').appendChild(div.firstElementChild);
+}
+
+function seqRemoveStep(idx) {
+  const steps = window._seqEditorSteps || [];
+  steps.splice(idx, 1);
+  window._seqEditorSteps = steps;
+  document.getElementById(`seq-step-${idx}`)?.remove();
+}
+
+function _readSeqFormSteps() {
+  const steps = window._seqEditorSteps || [];
+  document.querySelectorAll('[data-field]').forEach(el => {
+    const i = parseInt(el.dataset.step);
+    const field = el.dataset.field;
+    if (!isNaN(i) && steps[i]) steps[i][field] = field === 'day' ? parseInt(el.value)||0 : el.value;
+  });
+  return steps;
+}
+
+async function saveSequenceTrack(campaignId, trackIdx) {
+  const name     = document.getElementById('seq-track-name')?.value?.trim();
+  const keywords = document.getElementById('seq-keywords')?.value?.split(',').map(k=>k.trim()).filter(Boolean);
+  const steps    = _readSeqFormSteps();
+
+  if (!name)         { showToast('Track name is required', 'error'); return; }
+  if (!keywords?.length) { showToast('At least one keyword is required', 'error'); return; }
+  if (!steps.length) { showToast('At least one email step is required', 'error'); return; }
+
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+  const c = cRes.data;
+  let sequences = [];
+  try { sequences = JSON.parse(c.email_sequences || '[]'); } catch {}
+
+  const track = { name, keywords, steps };
+  if (trackIdx >= 0) sequences[trackIdx] = track;
+  else sequences.push(track);
+
+  const res = await API.updateCampaign(campaignId, { email_sequences: sequences });
+  if (!res.success) { showToast('Failed to save', 'error'); return; }
+
+  // Update cache
+  if (!window._campaignCache) window._campaignCache = {};
+  window._campaignCache[campaignId] = res.data;
+
+  document.getElementById('seq-editor-overlay')?.remove();
+  showToast('Sequence saved', 'success');
+
+  // Re-render the sequence list in place
+  const listEl = document.getElementById(`seq-list-${campaignId}`);
+  if (listEl) {
+    let updatedSeqs = [];
+    try { updatedSeqs = JSON.parse(res.data.email_sequences || '[]'); } catch {}
+    listEl.innerHTML = renderSequenceList(updatedSeqs, campaignId);
+  }
+}
+
+async function deleteSequenceTrack(campaignId, trackIdx) {
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+  const c = cRes.data;
+  let sequences = [];
+  try { sequences = JSON.parse(c.email_sequences || '[]'); } catch {}
+  sequences.splice(trackIdx, 1);
+
+  const res = await API.updateCampaign(campaignId, { email_sequences: sequences });
+  if (!res.success) { showToast('Failed to remove track', 'error'); return; }
+  showToast('Track removed', 'success');
+
+  const listEl = document.getElementById(`seq-list-${campaignId}`);
+  if (listEl) {
+    let updatedSeqs = [];
+    try { updatedSeqs = JSON.parse(res.data.email_sequences || '[]'); } catch {}
+    listEl.innerHTML = renderSequenceList(updatedSeqs, campaignId);
+  }
+}
+
+async function previewSequenceEmail(campaignId, trackIdx, stepIdx) {
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+  const c = cRes.data;
+  let sequences = [];
+  try { sequences = JSON.parse(c.email_sequences || '[]'); } catch {}
+  const track = sequences[trackIdx];
+  if (!track) return;
+  _showEmailPreviewModal(c, track, track.steps[stepIdx] || track.steps[0], stepIdx);
+}
+
+function seqPreviewStep(campaignId, stepIdx) {
+  const steps = _readSeqFormSteps();
+  const step = steps[stepIdx];
+  if (!step) return;
+  const mockCampaign = { name: 'Campaign', asset_name: 'the report', logo_url: null };
+  const name = document.getElementById('seq-track-name')?.value || 'Preview Track';
+  const keywords = (document.getElementById('seq-keywords')?.value || '').split(',').map(k=>k.trim()).filter(Boolean);
+  _showEmailPreviewModal(mockCampaign, { name, keywords, steps }, step, stepIdx);
+}
+
+function _showEmailPreviewModal(c, track, step, stepIdx) {
+  const existing = document.getElementById('email-preview-overlay');
+  if (existing) existing.remove();
+
+  const sampleLeads = [
+    { first_name:'Sarah', last_name:'Chen',   company:'Acme Corp',      title:'VP of Engineering',        industry:'SaaS' },
+    { first_name:'James', last_name:'Okafor', company:'Meridian Health', title:'Chief Information Officer', industry:'Healthcare' },
+    { first_name:'Priya', last_name:'Nair',   company:'Sequoia Data',   title:'Head of Platform Eng',     industry:'Financial Services' },
+    { first_name:'Tom',   last_name:'Werner', company:'BlueSky AI',     title:'CTO',                       industry:'Technology' },
+  ];
+
+  let activeLeadIdx = 0;
+
+  const renderPreview = (leadIdx) => {
+    const lead = sampleLeads[leadIdx];
+    const assetName = c.asset_name || 'our latest report';
+    const subject = resolveVars(step.subject, lead, assetName);
+    const body    = resolveVars(step.body, lead, assetName);
+
+    return `
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+        ${sampleLeads.map((l,i) => `
+          <button onclick="document.getElementById('ep-lead-selector').querySelectorAll('button').forEach(b=>b.classList.remove('btn-pri'));this.classList.add('btn-pri');document.getElementById('ep-body').innerHTML=document.getElementById('ep-preview-fn').call(${i})"
+            class="btn btn-sm ${i===leadIdx?'btn-pri':'btn-secondary'}" style="font-size:11px">${l.first_name} · ${l.title.split(' ')[0]}</button>`).join('')}
+      </div>
+      <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px">
+        <div class="fs11 fw5" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">To</div>
+        <div class="fs13 fw5">${lead.first_name} ${lead.last_name} &lt;${lead.first_name.toLowerCase()}.${lead.last_name.toLowerCase()}@${lead.company.toLowerCase().replace(/\s+/g,'')}.com&gt;</div>
+        <div class="fs12" style="color:var(--text-tertiary);margin-top:2px">${lead.title} at ${lead.company}</div>
+      </div>
+      <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px">
+        <div class="fs11 fw5" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Subject</div>
+        <div class="fs13 fw5">${subject || '(no subject)'}</div>
+      </div>
+      <div style="border:0.5px solid var(--border);border-radius:var(--radius-md);padding:16px 18px;min-height:160px">
+        <div class="fs13" style="line-height:1.8;white-space:pre-wrap;color:var(--text-primary)">${body || '(no body)'}</div>
+      </div>`;
+  };
+
+  const overlay = document.createElement('div');
+  overlay.id = 'email-preview-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const stepTabs = track.steps.map((s,i) => `
+    <button class="btn btn-sm ${i===stepIdx?'btn-pri':'btn-secondary'}"
+      style="font-size:11px"
+      onclick="(function(){document.getElementById('email-preview-overlay').remove();_showEmailPreviewModal(window._epCampaign,window._epTrack,window._epTrack.steps[${i}],${i})})()">
+      Step ${i+1} — Day ${s.day}
+    </button>`).join('');
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:600px;width:96vw;text-align:left;max-height:92vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${c.logo_url ? `<img src="${c.logo_url}" style="height:22px;object-fit:contain;border-radius:3px" onerror="this.style.display='none'"/>` : ''}
+          <div>
+            <div class="page-overline">${track.name}</div>
+            <div class="fw5 fs15">Email Preview</div>
+          </div>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('email-preview-overlay').remove()">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+        ${stepTabs}
+      </div>
+
+      <div class="fs11 fw5" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Preview as…</div>
+      <div id="ep-lead-selector" style="margin-bottom:14px">
+        ${sampleLeads.map((l,i) => `
+          <button class="btn btn-sm ${i===0?'btn-pri':'btn-secondary'}" style="font-size:11px;margin:0 4px 6px 0"
+            onclick="document.getElementById('ep-body').innerHTML=window._epRender(${i});document.getElementById('ep-lead-selector').querySelectorAll('button').forEach((b,bi)=>b.className='btn btn-sm '+(bi===${i}?'btn-pri':'btn-secondary')+' ep-lb');this.className='btn btn-sm btn-pri ep-lb'">
+            ${l.first_name} · ${l.title.split(' ')[0]}
+          </button>`).join('')}
+      </div>
+
+      <div id="ep-body">${renderPreview(0)}</div>
+    </div>`;
+
+  window._epCampaign = c;
+  window._epTrack    = track;
+  window._epRender   = renderPreview;
+  document.body.appendChild(overlay);
+}
+
+window.openSequenceEditor    = openSequenceEditor;
+window.saveSequenceTrack     = saveSequenceTrack;
+window.deleteSequenceTrack   = deleteSequenceTrack;
+window.previewSequenceEmail  = previewSequenceEmail;
+window.seqAddStep            = seqAddStep;
+window.seqRemoveStep         = seqRemoveStep;
+window.seqPreviewStep        = seqPreviewStep;
+window._showEmailPreviewModal = _showEmailPreviewModal;
