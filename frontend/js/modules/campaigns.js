@@ -155,7 +155,7 @@ function renderRequestCard(c, clientMap) {
           <div class="rq-section"><div class="rq-section-icon">🎨</div><div><div class="request-label">Branding</div><div style="display:flex;gap:6px;align-items:center"><div class="rq-color-swatch" style="background:${bc}"></div><div class="rq-color-swatch" style="background:${bs}"></div><div class="rq-color-swatch" style="background:${ba}"></div>${c.logo_url?`<span class="fs11" style="color:var(--text-tertiary);margin-left:4px">+ Logo</span>`:''}</div></div></div>
         </div>
       </div>
-      ${customQ.length?`<div class="rq-questions"><div class="request-label" style="margin-bottom:8px">Custom Qualifying Questions</div>${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}</div>`:''}
+      ${customQ.length?`<div class="rq-questions"><div class="request-label" style="margin-bottom:8px">Custom Qualifying Questions</div>${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><div><span class="fs13">${q.question}</span>${q.answer?`<div class="fs12" style="color:var(--text-tertiary);margin-top:2px">Expected: ${q.answer}</div>`:''}</div></div>`).join('')}</div>`:''}
       ${c.notes?`<div class="rq-notes"><div class="request-label">Client Notes</div><div class="fs13" style="color:var(--text-tertiary);line-height:1.5;margin-top:4px">${c.notes}</div></div>`:''}
       <div class="rq-actions">
         <button class="btn btn-pri btn-sm" onclick="deployLandingPage(${c.id})" style="flex:1">🚀 Deploy Landing Page</button>
@@ -284,7 +284,7 @@ async function renderCampaignDetail(campaignId) {
 
       ${customQ.length?`<div class="cd-subsection">
         <div class="cd-sub-label">Custom Qualifying Questions</div>
-        ${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><span class="fs13">${q.question}</span></div>`).join('')}
+        ${customQ.map((q,i)=>`<div class="rq-question"><span class="rq-q-num" style="background:var(--blue-100);color:var(--blue-600)">${i+1}</span><div><span class="fs13">${q.question}</span>${q.answer?`<div class="fs12" style="color:var(--text-tertiary);margin-top:2px">Expected: ${q.answer}</div>`:''}</div></div>`).join('')}
       </div>`:''}
 
       ${c.notes?`<div class="cd-subsection" style="border-bottom:none">
