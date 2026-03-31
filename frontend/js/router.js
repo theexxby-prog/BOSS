@@ -52,17 +52,17 @@ function navigate(id) {
   document.getElementById('topbar-sub').textContent   = MODULE_SUBS[id]   || '';
   // Preserve drilldown state across module switches; only reset on explicit back-nav
   if (typeof State !== 'undefined') {
+    State.currentModule = id; // Set BEFORE rendering to ensure modules check correct state
     // Always land on the active tab when clicking nav items
     if (id === 'campaigns') { State.campaignsTab = 'active'; State.viewingCampaign = null; }
     if (id === 'leads') { State.leadsTab = 'pipeline'; }
     if (id === 'clients') { State.clientDetail = null; }
-    if (id === 'assets') { State.assetTab = 'assets'; State.assetClientFilter = ''; State.assetCampaignFilter = ''; }
+    if (id === 'assets') { State.assetsTab = 'assets'; State.assetClientFilter = ''; State.assetCampaignFilter = ''; }
     if (id === 'finance') { State.finTab = 'overview'; }
     if (id === 'documents') { State.docsTab = 'all'; }
     if (id === 'social') { State.socTab = 'calendar'; }
   }
   renderModule(id);
-  State.currentModule = id;
 }
 
 async function renderModule(id) {
