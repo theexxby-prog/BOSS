@@ -53,7 +53,7 @@ ${JSON.stringify(batch.map((c, i) => ({ _idx: i, ...c })), null, 2)}
 
 Return ONLY the JSON array, no other text.`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages/batch', {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

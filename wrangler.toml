@@ -19,3 +19,6 @@ database_id = "fff1beb1-9938-4297-af66-797e4126dd5a"
 [dev]
 port = 8787
 local_protocol = "http"
+
+[env.production]
+# ANTHROPIC_API_KEY is set via GitHub Secrets in the deploy workflow

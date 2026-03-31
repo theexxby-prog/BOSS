@@ -16,6 +16,8 @@ jobs:
 
       - name: Deploy worker to Cloudflare
         uses: cloudflare/wrangler-action@v3
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: fe2ae67928de1f5b18f1a7d1edf65005
