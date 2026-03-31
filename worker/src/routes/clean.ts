@@ -16,8 +16,8 @@ export async function cleanLeadsRoute(request: Request, env: Env, origin: string
   }
 
   try {
-    // Batch into groups of 50 for Claude processing
-    const batchSize = 50;
+    // Batch into groups of 500 for Claude processing (larger batches = fewer API calls = faster)
+    const batchSize = 500;
     const batches = [];
     for (let i = 0; i < contacts.length; i += batchSize) {
       batches.push(contacts.slice(i, i + batchSize));
