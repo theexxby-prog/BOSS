@@ -22,6 +22,7 @@ import { webhooksRouter }      from './routes/webhooks';
 import { campaignLeadsRouter } from './routes/campaign-leads';
 import { generatePageRouter }  from './routes/generate-page';
 import { sourcingRouter }      from './routes/sourcing';
+import { cleanLeadsRoute }     from './routes/clean';
 import { dbFirst, dbAll }      from './db';
 
 export default {
@@ -103,6 +104,7 @@ export default {
     if (path.startsWith('/api/campaigns/') && path.endsWith('/source-leads'))
       return sourcingRouter(request, env, origin);
     if (path.startsWith('/api/campaigns'))   return campaignsRouter(request, env, origin);
+    if (path === '/api/global-leads/clean' && request.method === 'POST') return cleanLeadsRoute(request, env, origin);
     if (path.startsWith('/api/global-leads')) return sourcingRouter(request, env, origin);
     if (path.startsWith('/api/apollo'))       return sourcingRouter(request, env, origin);
     if (path.startsWith('/api/leads'))       return leadsRouter(request, env, origin);

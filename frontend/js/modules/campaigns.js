@@ -1314,6 +1314,17 @@ async function openSourcingPanel(campaignId) {
           </div>`).join('')}
       </div>
 
+      <!-- CSV Import & Clean -->
+      <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px;display:none" id="csv-import-section">
+        <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);margin-bottom:10px">Import & Clean Database</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="csv-file-input" type="file" accept=".csv,.txt" style="display:none" onchange="handleCSVUpload(event)"/>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('csv-file-input').click()">📤 Upload CSV</button>
+          <button class="btn btn-pri btn-sm" id="csv-clean-btn" onclick="cleanUploadedContacts()" style="display:none">✨ Clean Database</button>
+          <span id="csv-status" class="fs12" style="color:var(--text-tertiary)"></span>
+        </div>
+      </div>
+
       <!-- ICP Filters -->
       <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px">
         <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);margin-bottom:10px">ICP Filters <span style="font-weight:400;text-transform:none;letter-spacing:0"> — pre-filled from campaign</span></div>
@@ -1374,7 +1385,12 @@ async function openSourcingPanel(campaignId) {
 
   window._sourcingMethod = 'owndb';
   window._sourcingResults = [];
+  window._currentSourcingCampaignId = campaignId;
   document.body.appendChild(overlay);
+
+  // Show CSV import section
+  const csvSection = document.getElementById('csv-import-section');
+  if (csvSection) csvSection.style.display = 'block';
 }
 
 function selectSourcingMethod(method) {
@@ -1495,3 +1511,125 @@ window.runSourcingSearch    = runSourcingSearch;
 window.sourcingSelectAll    = sourcingSelectAll;
 window.assignSelectedLeads  = assignSelectedLeads;
 window.loadSourcingSummary  = loadSourcingSummary;
+
+// ═══════════════════════════════════════════════════════════
+// CSV Import & Database Cleaning
+// ═══════════════════════════════════════════════════════════
+
+function handleCSVUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const csv = e.target?.result as string;
+    const lines = csv.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { showToast('CSV must have header + data rows', 'error'); return; }
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const contacts = lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      const obj: any = {};
+      headers.forEach((h, i) => { obj[h] = values[i] || null; });
+      return obj;
+    });
+
+    window._uploadedContacts = contacts;
+    const statusEl = document.getElementById('csv-status');
+    if (statusEl) statusEl.textContent = `${contacts.length} contacts loaded`;
+    const cleanBtn = document.getElementById('csv-clean-btn');
+    if (cleanBtn) cleanBtn.style.display = 'block';
+  };
+  reader.readAsText(file);
+}
+
+async function cleanUploadedContacts() {
+  const contacts = window._uploadedContacts || [];
+  if (!contacts.length) { showToast('No contacts to clean', 'error'); return; }
+
+  const btn = document.getElementById('csv-clean-btn');
+  if (btn) { btn.textContent = 'Cleaning…'; btn.disabled = true; }
+
+  const res = await API.cleanLeads(contacts);
+
+  if (btn) { btn.textContent = '✨ Clean Database'; btn.disabled = false; }
+
+  if (!res.success) {
+    showToast(`Error: ${res.error}`, 'error');
+    return;
+  }
+
+  const { cleaned, applied, flagged, flaggedRecords } = res.data || {};
+  window._cleanedContacts = cleaned;
+
+  showCleanResultsModal(applied, flagged, flaggedRecords || []);
+}
+
+function showCleanResultsModal(applied, flagged, flaggedRecords) {
+  const existing = document.getElementById('clean-results-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'clean-results-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const flaggedHtml = flaggedRecords.length ? `
+    <div style="margin-top:16px;padding-top:16px;border-top:0.5px solid var(--border)">
+      <div class="fs13 fw5" style="margin-bottom:10px;color:var(--amber-600)">⚠️ ${flagged} Issues Flagged</div>
+      <div style="max-height:200px;overflow-y:auto">
+        ${flaggedRecords.slice(0, 10).map(f => `
+          <div style="padding:8px;background:var(--amber-100);border-radius:6px;margin-bottom:6px;font-size:12px">
+            <strong>Row ${(f._idx||0)+1}:</strong> ${f.reason || f.action}
+          </div>`).join('')}
+        ${flaggedRecords.length > 10 ? `<div style="font-size:12px;color:var(--text-tertiary)">+${flaggedRecords.length-10} more issues</div>` : ''}
+      </div>
+    </div>
+  ` : '';
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:500px;width:96vw">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:40px;margin-bottom:10px">✨</div>
+        <div class="fw5 fs16">Database Cleaned</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="background:var(--blue-100);border-radius:var(--radius-md);padding:12px;text-align:center">
+          <div class="fw5 fs18" style="color:var(--blue-600)">${applied}</div>
+          <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Fields Fixed</div>
+        </div>
+        <div style="background:${flagged?'var(--amber-100)':'var(--green-100)'};border-radius:var(--radius-md);padding:12px;text-align:center">
+          <div class="fw5 fs18" style="color:${flagged?'var(--amber-600)':'var(--green-600)'}">${flagged}</div>
+          <div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Flagged for Review</div>
+        </div>
+      </div>
+
+      ${flaggedHtml}
+
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-pri" style="flex:1" onclick="assignCleanedLeads(window._currentSourcingCampaignId)">✓ Use Cleaned Data</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('clean-results-overlay').remove()">Review Later</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+}
+
+async function assignCleanedLeads(campaignId) {
+  const cleaned = window._cleanedContacts || [];
+  if (!cleaned.length) { showToast('No cleaned contacts', 'error'); return; }
+
+  const res = await API.assignLeads(campaignId, cleaned);
+  if (!res.success) { showToast(`Error: ${res.error}`, 'error'); return; }
+
+  const { added, dupes, errors } = res.data;
+  showToast(`✓ ${added} leads imported${dupes?`, ${dupes} duplicates`:''}${errors?`, ${errors} errors`:''}`);
+  document.getElementById('clean-results-overlay')?.remove();
+  document.getElementById('sourcing-panel-overlay')?.remove();
+  loadSourcingSummary(campaignId);
+}
+
+window.handleCSVUpload = handleCSVUpload;
+window.cleanUploadedContacts = cleanUploadedContacts;
+window.assignCleanedLeads = assignCleanedLeads;

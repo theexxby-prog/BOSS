@@ -141,6 +141,7 @@ const API = {
   searchApollo:      (body)        => apiFetch('/api/apollo/search',        { method: 'POST', body: JSON.stringify(body) }),
   assignLeads:       (campaignId, contacts) => apiFetch(`/api/campaigns/${campaignId}/source-leads`, { method: 'POST', body: JSON.stringify({ contacts }) }),
   getSourcingSummary:(campaignId)  => apiFetch(`/api/campaigns/${campaignId}/source-leads`),
+  cleanLeads:        (contacts)    => apiFetch('/api/global-leads/clean', { method: 'POST', body: JSON.stringify({ contacts }) }),
 };
 
 window.API = API;

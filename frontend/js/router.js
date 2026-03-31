@@ -42,6 +42,8 @@ const MODULE_RENDERERS = {
   settings:  () => renderSettings(),
 };
 
+let _renderGuard = 0;
+
 function navigate(id) {
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.getAttribute('data-module') === id);
@@ -61,6 +63,7 @@ function navigate(id) {
 async function renderModule(id) {
   const el       = document.getElementById('content');
   const renderer = MODULE_RENDERERS[id] || MODULE_RENDERERS.overview;
+  const guard    = ++_renderGuard; // Guard against stale async renders
   const result   = renderer();
   if (result instanceof Promise) {
     el.innerHTML = `<div style="padding:0">
@@ -70,9 +73,10 @@ async function renderModule(id) {
       </div>
       <div class="skeleton" style="height:320px;border-radius:12px"></div>
     </div>`;
-    el.innerHTML = await result;
+    const html = await result;
+    if (_renderGuard === guard) el.innerHTML = html; // Only render if this is still the latest request
   } else {
-    el.innerHTML = result;
+    if (_renderGuard === guard) el.innerHTML = result;
   }
 }
 
