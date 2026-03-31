@@ -363,11 +363,27 @@ async function renderCampaignDetail(campaignId) {
       </div>
     </div>
 
+    <!-- Lead Sourcing -->
+    <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--blue-600);margin-bottom:2px">Lead Sourcing</div>
+          <div class="fw5 fs14">Source Leads for this Campaign</div>
+        </div>
+        <button class="btn btn-pri btn-sm" onclick="openSourcingPanel(${c.id})">Source Leads</button>
+      </div>
+      <div id="sourcing-summary-${c.id}" style="padding:16px 20px">
+        <div class="fs12" style="color:var(--text-tertiary)">Loading sourcing status…</div>
+      </div>
+    </div>
+
     ${c.status==='draft'?`<div class="rq-actions" style="margin-top:12px">
       <button class="btn btn-pri btn-sm" onclick="deployLandingPage(${c.id})" style="flex:1">🚀 Deploy Landing Page</button>
       <button class="btn btn-ghost btn-sm" onclick="editCampaignRequest(${c.id})">Edit</button>
     </div>`:''}
   </div>`;
+  // Load sourcing summary async after render
+  setTimeout(() => loadSourcingSummary(c.id), 0);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1226,3 +1242,256 @@ window.seqAddStep            = seqAddStep;
 window.seqRemoveStep         = seqRemoveStep;
 window.seqPreviewStep        = seqPreviewStep;
 window._showEmailPreviewModal = _showEmailPreviewModal;
+
+// ═══════════════════════════════════════════════════════════
+// Lead Sourcing Panel
+// ═══════════════════════════════════════════════════════════
+
+async function loadSourcingSummary(campaignId) {
+  const el = document.getElementById(`sourcing-summary-${campaignId}`);
+  if (!el) return;
+  const res = await API.getSourcingSummary(campaignId);
+  if (!res.success) { el.innerHTML = `<div class="fs12" style="color:var(--text-tertiary)">No leads sourced yet.</div>`; return; }
+  const { total, rows } = res.data;
+  if (!total) {
+    el.innerHTML = `<div class="fs12" style="color:var(--text-tertiary)">No leads sourced yet. Click <strong>Source Leads</strong> to begin.</div>`;
+    return;
+  }
+  const statusCount = (s) => rows.filter(r => r.status === s).reduce((a, r) => a + r.count, 0);
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="text-align:center"><div class="fs20 fw5">${total}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Total Sourced</div></div>
+      <div style="text-align:center"><div class="fs20 fw5" style="color:var(--amber-600)">${statusCount('pending')}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Pending</div></div>
+      <div style="text-align:center"><div class="fs20 fw5" style="color:var(--blue-600)">${statusCount('delivered')}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">In Sequence</div></div>
+      <div style="text-align:center"><div class="fs20 fw5 clr-grn">${statusCount('accepted')}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Converted</div></div>
+    </div>`;
+}
+
+async function openSourcingPanel(campaignId) {
+  const existing = document.getElementById('sourcing-panel-overlay');
+  if (existing) existing.remove();
+
+  const cRes = await API.getCampaign(campaignId);
+  if (!cRes.success) { showToast('Error loading campaign', 'error'); return; }
+  const c = cRes.data;
+
+  let titles=[], industries=[], sizes=[], geos=[];
+  try { titles     = JSON.parse(c.titles||'[]'); } catch {}
+  try { industries = JSON.parse(c.industries||'[]'); } catch {}
+  try { sizes      = JSON.parse(c.company_sizes||'[]'); } catch {}
+  try { geos       = JSON.parse(c.geo||'[]'); } catch {}
+
+  const overlay = document.createElement('div');
+  overlay.id = 'sourcing-panel-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:900px;width:97vw;text-align:left;max-height:94vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div class="page-overline">Lead Sourcing</div>
+          <div class="fw5 fs16">${c.name}</div>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('sourcing-panel-overlay').remove()">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Method selector -->
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        ${[
+          { id:'owndb',    label:'Own Database',   icon:'🗄️',  sub:'Search your existing contacts' },
+          { id:'apollo',   label:'Apollo',          icon:'🚀',  sub:'Search 275M+ B2B contacts' },
+          { id:'linkedin', label:'LinkedIn',         icon:'💼',  sub:'Coming soon — upload export' },
+        ].map(m => `
+          <div class="sourcing-method${m.id==='owndb'?' active':''}" id="method-${m.id}"
+            onclick="selectSourcingMethod('${m.id}')"
+            style="flex:1;padding:14px 16px;border:0.5px solid var(--border);border-radius:var(--radius-md);cursor:pointer;transition:border-color .15s${m.id==='owndb'?';border-color:var(--blue-600);background:var(--blue-100)':''}${m.id==='linkedin'?';opacity:.5;pointer-events:none':''}">
+            <div style="font-size:20px;margin-bottom:4px">${m.icon}</div>
+            <div class="fw5 fs13">${m.label}</div>
+            <div class="fs11" style="color:var(--text-tertiary);margin-top:2px">${m.sub}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- ICP Filters -->
+      <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px">
+        <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);margin-bottom:10px">ICP Filters <span style="font-weight:400;text-transform:none;letter-spacing:0"> — pre-filled from campaign</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Target Titles</label>
+            <input id="src-titles" type="text" class="form-input" value="${titles.join(', ')}" placeholder="VP Engineering, CTO, Head of Infra…"/>
+          </div>
+          <div>
+            <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Industries</label>
+            <input id="src-industries" type="text" class="form-input" value="${industries.join(', ')}" placeholder="SaaS, Technology…"/>
+          </div>
+          <div>
+            <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Company Sizes</label>
+            <input id="src-sizes" type="text" class="form-input" value="${sizes.join(', ')}" placeholder="500-1000, 1000-5000…"/>
+          </div>
+          <div>
+            <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Geographies</label>
+            <input id="src-geos" type="text" class="form-input" value="${geos.join(', ')}" placeholder="United States, United Kingdom…"/>
+          </div>
+        </div>
+        <div id="apollo-extra" style="display:none;margin-top:10px">
+          <label class="fs11 fw5" style="color:var(--text-tertiary);display:block;margin-bottom:4px">Free-text keyword search (Apollo)</label>
+          <input id="src-keyword" type="text" class="form-input" placeholder="e.g. AI infrastructure, cloud security…"/>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+          <button class="btn btn-pri btn-sm" onclick="runSourcingSearch(${campaignId})" id="src-search-btn">Search</button>
+          <span id="src-status" class="fs12" style="color:var(--text-tertiary)"></span>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="src-results" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="fs13 fw5" id="src-results-label">Results</div>
+          <button class="btn btn-pri btn-sm" id="src-assign-btn" onclick="assignSelectedLeads(${campaignId})" style="display:none">
+            Assign Selected to Campaign
+          </button>
+        </div>
+        <div style="border:0.5px solid var(--border);border-radius:var(--radius-md);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:var(--bg-muted)">
+                <th style="width:36px;padding:8px 12px"><input type="checkbox" id="src-select-all" onchange="sourcingSelectAll(this)"/></th>
+                <th class="fs11 fw5" style="text-align:left;padding:8px 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Name</th>
+                <th class="fs11 fw5" style="text-align:left;padding:8px 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Title</th>
+                <th class="fs11 fw5" style="text-align:left;padding:8px 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Company</th>
+                <th class="fs11 fw5" style="text-align:left;padding:8px 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Location</th>
+                <th class="fs11 fw5" style="text-align:left;padding:8px 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Email</th>
+                <th class="fs11 fw5" style="text-align:left;padding:8px 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)">Source</th>
+              </tr>
+            </thead>
+            <tbody id="src-results-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+
+  window._sourcingMethod = 'owndb';
+  window._sourcingResults = [];
+  document.body.appendChild(overlay);
+}
+
+function selectSourcingMethod(method) {
+  window._sourcingMethod = method;
+  document.querySelectorAll('.sourcing-method').forEach(el => {
+    el.style.borderColor = 'var(--border)';
+    el.style.background = '';
+  });
+  const active = document.getElementById(`method-${method}`);
+  if (active) { active.style.borderColor = 'var(--blue-600)'; active.style.background = 'var(--blue-100)'; }
+  const apolloExtra = document.getElementById('apollo-extra');
+  if (apolloExtra) apolloExtra.style.display = method === 'apollo' ? 'block' : 'none';
+}
+
+async function runSourcingSearch(campaignId) {
+  const titles     = document.getElementById('src-titles')?.value.split(',').map(t=>t.trim()).filter(Boolean) || [];
+  const industries = document.getElementById('src-industries')?.value.split(',').map(i=>i.trim()).filter(Boolean) || [];
+  const sizes      = document.getElementById('src-sizes')?.value.split(',').map(s=>s.trim()).filter(Boolean) || [];
+  const geos       = document.getElementById('src-geos')?.value.split(',').map(g=>g.trim()).filter(Boolean) || [];
+  const keyword    = document.getElementById('src-keyword')?.value?.trim() || '';
+  const method     = window._sourcingMethod || 'owndb';
+  const statusEl   = document.getElementById('src-status');
+  const btn        = document.getElementById('src-search-btn');
+
+  if (statusEl) statusEl.textContent = 'Searching…';
+  if (btn) btn.disabled = true;
+
+  let res;
+  if (method === 'apollo') {
+    res = await API.searchApollo({ titles, industries, company_sizes: sizes, geos, q_keyword: keyword, per_page: 25 });
+  } else {
+    const params = new URLSearchParams();
+    if (titles.length)     params.set('titles', titles.join(','));
+    if (industries.length) params.set('industries', industries.join(','));
+    if (sizes.length)      params.set('sizes', sizes.join(','));
+    if (geos.length)       params.set('geos', geos.join(','));
+    if (keyword)           params.set('q', keyword);
+    params.set('campaign_id', campaignId);
+    res = await API.searchGlobalLeads(`?${params.toString()}`);
+  }
+
+  if (btn) btn.disabled = false;
+
+  if (!res.success) {
+    if (statusEl) statusEl.textContent = `Error: ${res.error}`;
+    return;
+  }
+
+  const contacts = res.data || [];
+  window._sourcingResults = contacts;
+
+  const resultsEl = document.getElementById('src-results');
+  const labelEl   = document.getElementById('src-results-label');
+  const tbody      = document.getElementById('src-results-body');
+  const assignBtn  = document.getElementById('src-assign-btn');
+
+  if (statusEl) statusEl.textContent = `${contacts.length} contacts found`;
+  if (resultsEl) resultsEl.style.display = 'block';
+  if (labelEl) labelEl.textContent = `${contacts.length} Contacts Found`;
+
+  if (!contacts.length) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--text-tertiary)" class="fs13">No contacts matched your filters.</td></tr>`;
+    if (assignBtn) assignBtn.style.display = 'none';
+    return;
+  }
+
+  if (assignBtn) assignBtn.style.display = 'block';
+
+  tbody.innerHTML = contacts.map((p, i) => `
+    <tr style="border-top:0.5px solid var(--border)">
+      <td style="padding:8px 12px"><input type="checkbox" class="src-row-check" data-idx="${i}" checked/></td>
+      <td style="padding:8px 12px">
+        <div class="fw5 fs13">${p.first_name||''} ${p.last_name||''}</div>
+        ${p.linkedin_url ? `<a href="${p.linkedin_url}" target="_blank" class="fs11" style="color:var(--blue-600)">LinkedIn ↗</a>` : ''}
+      </td>
+      <td style="padding:8px 12px" class="fs13">${p.title||'—'}</td>
+      <td style="padding:8px 12px">
+        <div class="fs13">${p.company||'—'}</div>
+        <div class="fs11" style="color:var(--text-tertiary)">${p.industry||''}</div>
+      </td>
+      <td style="padding:8px 12px" class="fs12" style="color:var(--text-secondary)">${[p.city, p.country].filter(Boolean).join(', ')||'—'}</td>
+      <td style="padding:8px 12px" class="fs12">${p.email||<span style="color:var(--text-tertiary)">Requires enrichment</span>}</td>
+      <td style="padding:8px 12px"><span class="badge badge-${p.source==='apollo'?'blue':p.source==='import'?'amber':'gray'}">${p.source||'import'}</span></td>
+    </tr>`).join('');
+}
+
+function sourcingSelectAll(checkbox) {
+  document.querySelectorAll('.src-row-check').forEach(c => c.checked = checkbox.checked);
+}
+
+async function assignSelectedLeads(campaignId) {
+  const allContacts = window._sourcingResults || [];
+  const selected = [];
+  document.querySelectorAll('.src-row-check').forEach((c, i) => {
+    if (c.checked && allContacts[parseInt(c.dataset.idx)]) selected.push(allContacts[parseInt(c.dataset.idx)]);
+  });
+
+  if (!selected.length) { showToast('Select at least one contact', 'error'); return; }
+
+  const btn = document.getElementById('src-assign-btn');
+  if (btn) { btn.textContent = 'Assigning…'; btn.disabled = true; }
+
+  const res = await API.assignLeads(campaignId, selected);
+
+  if (btn) { btn.textContent = 'Assign Selected to Campaign'; btn.disabled = false; }
+
+  if (!res.success) { showToast(`Error: ${res.error}`, 'error'); return; }
+
+  const { added, dupes, errors } = res.data;
+  showToast(`✓ ${added} leads assigned${dupes ? `, ${dupes} already in campaign` : ''}${errors ? `, ${errors} errors` : ''}`, 'success');
+  document.getElementById('sourcing-panel-overlay')?.remove();
+  loadSourcingSummary(campaignId);
+}
+
+window.openSourcingPanel    = openSourcingPanel;
+window.selectSourcingMethod = selectSourcingMethod;
+window.runSourcingSearch    = runSourcingSearch;
+window.sourcingSelectAll    = sourcingSelectAll;
+window.assignSelectedLeads  = assignSelectedLeads;
+window.loadSourcingSummary  = loadSourcingSummary;

@@ -134,6 +134,13 @@ const API = {
   getInvoicePreview: (id)     => apiFetch(`/api/campaigns/${id}/invoice-preview`),
   generateInvoice:   (id)     => apiFetch(`/api/campaigns/${id}/generate-invoice`, { method: 'POST' }),
   completeCampaign:  (id)     => apiFetch(`/api/campaigns/${id}/complete`, { method: 'POST' }),
+
+  // Lead Sourcing
+  searchGlobalLeads: (params = '') => apiFetch(`/api/global-leads${params}`),
+  importGlobalLeads: (body)        => apiFetch('/api/global-leads/import', { method: 'POST', body: JSON.stringify(body) }),
+  searchApollo:      (body)        => apiFetch('/api/apollo/search',        { method: 'POST', body: JSON.stringify(body) }),
+  assignLeads:       (campaignId, contacts) => apiFetch(`/api/campaigns/${campaignId}/source-leads`, { method: 'POST', body: JSON.stringify({ contacts }) }),
+  getSourcingSummary:(campaignId)  => apiFetch(`/api/campaigns/${campaignId}/source-leads`),
 };
 
 window.API = API;
