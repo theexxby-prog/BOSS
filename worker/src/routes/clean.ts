@@ -26,8 +26,13 @@ export async function cleanLeadsRoute(request: Request, env: Env, origin: string
     const allFixes: any[] = [];
     const flagged: any[] = [];
 
-    for (const batch of batches) {
-      const cleaningPrompt = `You are a B2B contact data quality expert. I'll give you a batch of contacts with potential data quality issues.
+    // Process batches in parallel (max 5 at a time to avoid overwhelming the API)
+    const parallelLimit = 5;
+    for (let i = 0; i < batches.length; i += parallelLimit) {
+      const parallelBatches = batches.slice(i, i + parallelLimit);
+
+      const promises = parallelBatches.map(async (batch) => {
+        const cleaningPrompt = `You are a B2B contact data quality expert. I'll give you a batch of contacts with potential data quality issues.
 
 For each contact, identify and suggest fixes for:
 1. Name capitalization (John Doe not JOHN DOE or john doe)
@@ -53,48 +58,59 @@ ${JSON.stringify(batch.map((c, i) => ({ _idx: i, ...c })), null, 2)}
 
 Return ONLY the JSON array, no other text.`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 4096,
-          messages: [
-            {
-              role: 'user',
-              content: cleaningPrompt,
-            },
-          ],
-        }),
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 4096,
+            messages: [
+              {
+                role: 'user',
+                content: cleaningPrompt,
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.text();
+          console.error('Claude API error:', err);
+          throw new Error(`Claude error: ${response.status}`);
+        }
+
+        const data = (await response.json()) as any;
+        const content = data.content?.[0]?.text || '';
+
+        // Parse Claude's response
+        let fixes: any[] = [];
+        try {
+          fixes = JSON.parse(content);
+        } catch (e) {
+          console.error('Failed to parse Claude response:', content);
+          fixes = [];
+        }
+
+        return fixes || [];
       });
 
-      if (!response.ok) {
-        const err = await response.text();
-        console.error('Claude API error:', err);
-        return jsonResponse({ success: false, error: `Claude error: ${response.status}` }, 502, origin);
-      }
-
-      const data = (await response.json()) as any;
-      const content = data.content?.[0]?.text || '';
-
-      // Parse Claude's response
-      let fixes: any[] = [];
       try {
-        fixes = JSON.parse(content);
-      } catch (e) {
-        console.error('Failed to parse Claude response:', content);
-        fixes = [];
-      }
-
-      if (Array.isArray(fixes)) {
-        fixes.forEach((fix: any) => {
-          if (fix.action === 'flag') flagged.push(fix);
-          else allFixes.push(fix);
+        const results = await Promise.all(promises);
+        results.forEach((fixes) => {
+          if (Array.isArray(fixes)) {
+            fixes.forEach((fix: any) => {
+              if (fix.action === 'flag') flagged.push(fix);
+              else allFixes.push(fix);
+            });
+          }
         });
+      } catch (e) {
+        console.error('Batch processing error:', e);
+        return jsonResponse({ success: false, error: `Processing error: ${e}` }, 502, origin);
       }
     }
 
