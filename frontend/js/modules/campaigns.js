@@ -1548,20 +1548,25 @@ async function cleanUploadedContacts() {
   if (!contacts.length) { showToast('No contacts to clean', 'error'); return; }
 
   const btn = document.getElementById('csv-clean-btn');
-  if (btn) { btn.textContent = 'Cleaning…'; btn.disabled = true; }
+  if (btn) { btn.textContent = 'Uploading to Claude…'; btn.disabled = true; }
+
+  showToast(`🔄 Cleaning ${contacts.length} contacts with Claude…`, 'info');
 
   const res = await API.cleanLeads(contacts);
 
   if (btn) { btn.textContent = '✨ Clean Database'; btn.disabled = false; }
 
   if (!res.success) {
-    showToast(`Error: ${res.error}`, 'error');
+    const errorMsg = res.error || 'Unknown error';
+    showToast(`❌ Cleaning failed: ${errorMsg}`, 'error');
+    console.error('Clean error:', res.error);
     return;
   }
 
   const { cleaned, applied, flagged, flaggedRecords } = res.data || {};
   window._cleanedContacts = cleaned;
 
+  showToast(`✓ Complete! ${applied} fields fixed, ${flagged} flagged for review`, 'success');
   showCleanResultsModal(applied, flagged, flaggedRecords || []);
 }
 
