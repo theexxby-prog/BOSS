@@ -1472,7 +1472,7 @@ async function runSourcingSearch(campaignId) {
         <div class="fs11" style="color:var(--text-tertiary)">${p.industry||''}</div>
       </td>
       <td style="padding:8px 12px" class="fs12" style="color:var(--text-secondary)">${[p.city, p.country].filter(Boolean).join(', ')||'—'}</td>
-      <td style="padding:8px 12px" class="fs12">${p.email||<span style="color:var(--text-tertiary)">Requires enrichment</span>}</td>
+      <td style="padding:8px 12px" class="fs12">${p.email||'<span style="color:var(--text-tertiary)">Requires enrichment</span>'}</td>
       <td style="padding:8px 12px"><span class="badge badge-${p.source==='apollo'?'blue':p.source==='import'?'amber':'gray'}">${p.source||'import'}</span></td>
     </tr>`).join('');
 }
