@@ -1529,7 +1529,7 @@ function handleCSVUpload(event) {
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
     const contacts = lines.slice(1).map(line => {
       const values = line.split(',').map(v => v.trim());
-      const obj: any = {};
+      const obj = {};
       headers.forEach((h, i) => { obj[h] = values[i] || null; });
       return obj;
     });
