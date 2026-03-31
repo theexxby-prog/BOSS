@@ -1522,7 +1522,7 @@ function handleCSVUpload(event) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    const csv = e.target?.result as string;
+    const csv = e.target?.result;
     const lines = csv.split('\n').filter(l => l.trim());
     if (lines.length < 2) { showToast('CSV must have header + data rows', 'error'); return; }
 
