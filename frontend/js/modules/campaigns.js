@@ -1317,10 +1317,12 @@ async function openSourcingPanel(campaignId) {
       <!-- CSV Import & Clean -->
       <div style="background:var(--bg-muted);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px;display:none" id="csv-import-section">
         <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);margin-bottom:10px">Import & Clean Database</div>
-        <div style="display:flex;gap:10px;align-items:center">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input id="csv-file-input" type="file" accept=".csv,.txt" style="display:none" onchange="handleCSVUpload(event)"/>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('csv-file-input').click()">📤 Upload CSV</button>
           <button class="btn btn-pri btn-sm" id="csv-clean-btn" onclick="cleanUploadedContacts()" style="display:none">✨ Clean Database</button>
+          <button class="btn btn-ghost btn-sm" id="csv-cancel-btn" onclick="cancelCleaning()" style="display:none;color:var(--red-600)">✕ Cancel</button>
+          <button class="btn btn-ghost btn-sm" id="csv-search-btn" onclick="searchUploadedContacts()" style="display:none">🔍 Search Raw Data</button>
           <span id="csv-status" class="fs12" style="color:var(--text-tertiary)"></span>
         </div>
       </div>
@@ -1539,22 +1541,35 @@ function handleCSVUpload(event) {
     if (statusEl) statusEl.textContent = `${contacts.length} contacts loaded`;
     const cleanBtn = document.getElementById('csv-clean-btn');
     if (cleanBtn) cleanBtn.style.display = 'block';
+    const searchBtn = document.getElementById('csv-search-btn');
+    if (searchBtn) searchBtn.style.display = 'block';
   };
   reader.readAsText(file);
 }
+
+let _cleaningAborted = false;
 
 async function cleanUploadedContacts() {
   const contacts = window._uploadedContacts || [];
   if (!contacts.length) { showToast('No contacts to clean', 'error'); return; }
 
+  _cleaningAborted = false;
   const btn = document.getElementById('csv-clean-btn');
-  if (btn) { btn.textContent = 'Uploading to Claude…'; btn.disabled = true; }
+  const cancelBtn = document.getElementById('csv-cancel-btn');
+  if (btn) { btn.style.display = 'none'; }
+  if (cancelBtn) { cancelBtn.style.display = 'block'; }
 
   showToast(`🔄 Cleaning ${contacts.length} contacts with Claude…`, 'info');
 
   const res = await API.cleanLeads(contacts);
 
-  if (btn) { btn.textContent = '✨ Clean Database'; btn.disabled = false; }
+  if (cancelBtn) { cancelBtn.style.display = 'none'; }
+  if (btn) { btn.style.display = 'block'; }
+
+  if (_cleaningAborted) {
+    showToast('Cleaning cancelled', 'info');
+    return;
+  }
 
   if (!res.success) {
     const errorMsg = res.error || 'Unknown error';
@@ -1568,6 +1583,39 @@ async function cleanUploadedContacts() {
 
   showToast(`✓ Complete! ${applied} fields fixed, ${flagged} flagged for review`, 'success');
   showCleanResultsModal(applied, flagged, flaggedRecords || []);
+}
+
+function cancelCleaning() {
+  _cleaningAborted = true;
+  const cancelBtn = document.getElementById('csv-cancel-btn');
+  if (cancelBtn) { cancelBtn.style.display = 'none'; }
+  const btn = document.getElementById('csv-clean-btn');
+  if (btn) { btn.style.display = 'block'; btn.textContent = '✨ Clean Database'; btn.disabled = false; }
+  showToast('Cleaning cancelled', 'warning');
+}
+
+function searchUploadedContacts() {
+  const contacts = window._uploadedContacts || [];
+  if (!contacts.length) { showToast('No contacts uploaded', 'error'); return; }
+
+  // Get ICP filters
+  const titles = document.getElementById('src-titles').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  const industries = document.getElementById('src-industries').value.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+  const sizes = document.getElementById('src-sizes').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const geos = document.getElementById('src-geos').value.split(',').map(g => g.trim().toLowerCase()).filter(Boolean);
+
+  // Filter contacts against ICP
+  const matches = contacts.filter(c => {
+    const titleMatch = !titles.length || titles.some(t => (c.title||'').toLowerCase().includes(t));
+    const industryMatch = !industries.length || industries.some(i => (c.industry||'').toLowerCase().includes(i));
+    const sizeMatch = !sizes.length || sizes.some(s => (c.company_size||'').toLowerCase().includes(s));
+    const geoMatch = !geos.length || geos.some(g => (c.country||'').toLowerCase().includes(g));
+    return titleMatch && industryMatch && sizeMatch && geoMatch;
+  });
+
+  showToast(`Found ${matches.length} matching contacts out of ${contacts.length}`, 'info');
+  window._rawSearchResults = matches;
+  showSearchResultsTable(matches);
 }
 
 function showCleanResultsModal(applied, flagged, flaggedRecords) {
@@ -1635,6 +1683,56 @@ async function assignCleanedLeads(campaignId) {
   loadSourcingSummary(campaignId);
 }
 
+function showSearchResultsTable(contacts) {
+  const panel = document.getElementById('sourcing-panel-overlay');
+  if (panel) panel.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'sourcing-panel-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const rows = contacts.slice(0, 100).map(c => `
+    <tr>
+      <td style="padding:8px 12px"><strong>${c.name||'—'}</strong></td>
+      <td style="padding:8px 12px" class="fs12">${c.title||'—'}</td>
+      <td style="padding:8px 12px" class="fs12">${c.company||'—'}</td>
+      <td style="padding:8px 12px" class="fs12">${c.email||'—'}</td>
+    </tr>`).join('');
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:800px;width:96vw">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div>
+          <div class="fw5 fs16">Search Results</div>
+          <div class="fs12" style="color:var(--text-tertiary)">${contacts.length} matches found</div>
+        </div>
+        <button onclick="this.closest('.modal-overlay').remove()" class="btn btn-ghost btn-sm">✕</button>
+      </div>
+      <div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:8px;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--bg-muted);border-bottom:0.5px solid var(--border)">
+              <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Name</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Title</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Company</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+      ${contacts.length > 100 ? `<div class="fs12" style="color:var(--text-tertiary);margin-bottom:16px">Showing 100 of ${contacts.length} results</div>` : ''}
+      <button class="btn btn-pri" style="width:100%" onclick="document.getElementById('sourcing-panel-overlay').remove()">Close</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+}
+
 window.handleCSVUpload = handleCSVUpload;
 window.cleanUploadedContacts = cleanUploadedContacts;
+window.cancelCleaning = cancelCleaning;
+window.searchUploadedContacts = searchUploadedContacts;
 window.assignCleanedLeads = assignCleanedLeads;
