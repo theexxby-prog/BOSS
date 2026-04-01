@@ -1398,6 +1398,49 @@ async function openSourcingPanel(campaignId) {
   if (csvSection) csvSection.style.display = 'block';
 }
 
+// ═══════════════════════════════════════════════════════════
+// Unified CSV-aware filter parsing (used by both Apollo/DB and CSV search)
+// ═══════════════════════════════════════════════════════════
+function parseCommaSeparatedInput(value, normalize = true) {
+  if (!value || typeof value !== 'string') return [];
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+
+  // Helper to normalize for matching (lowercase, collapse whitespace, trim)
+  const normalizeForMatch = (val) => String(val || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    const nextChar = value[i + 1];
+
+    // Handle escaped quotes ("")
+    if (char === '"' && inQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      // Toggle quote state
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      // Unquoted comma = field separator
+      const trimmed = current.trim().replace(/^["']|["']$/g, '');
+      if (trimmed) result.push(normalize ? normalizeForMatch(trimmed) : trimmed);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  // Don't forget the last value
+  const trimmed = current.trim().replace(/^["']|["']$/g, '');
+  if (trimmed) result.push(normalize ? normalizeForMatch(trimmed) : trimmed);
+
+  return result;
+}
+
 function selectSourcingMethod(method) {
   window._sourcingMethod = method;
   document.querySelectorAll('.sourcing-method').forEach(el => {
@@ -1411,10 +1454,11 @@ function selectSourcingMethod(method) {
 }
 
 async function runSourcingSearch(campaignId) {
-  const titles     = document.getElementById('src-titles')?.value.split(',').map(t=>t.trim()).filter(Boolean) || [];
-  const industries = document.getElementById('src-industries')?.value.split(',').map(i=>i.trim()).filter(Boolean) || [];
-  const sizes      = document.getElementById('src-sizes')?.value.split(',').map(s=>s.trim()).filter(Boolean) || [];
-  const geos       = document.getElementById('src-geos')?.value.split(',').map(g=>g.trim()).filter(Boolean) || [];
+  // Use unified CSV-aware filter parsing (handles quotes, commas, normalization)
+  const titles     = parseCommaSeparatedInput(document.getElementById('src-titles')?.value);
+  const industries = parseCommaSeparatedInput(document.getElementById('src-industries')?.value);
+  const sizes      = parseCommaSeparatedInput(document.getElementById('src-sizes')?.value);
+  const geos       = parseCommaSeparatedInput(document.getElementById('src-geos')?.value);
   const keyword    = document.getElementById('src-keyword')?.value?.trim() || '';
   const method     = window._sourcingMethod || 'owndb';
   const statusEl   = document.getElementById('src-status');
@@ -1510,6 +1554,7 @@ async function assignSelectedLeads(campaignId) {
   loadSourcingSummary(campaignId);
 }
 
+window.parseCommaSeparatedInput = parseCommaSeparatedInput;
 window.openSourcingPanel    = openSourcingPanel;
 window.selectSourcingMethod = selectSourcingMethod;
 window.runSourcingSearch    = runSourcingSearch;
@@ -1673,37 +1718,6 @@ function searchUploadedContacts() {
     .replace(/\s+/g, ' ')  // Collapse multiple spaces
     .trim();
 
-  // Helper: Parse comma-separated filter values with CSV-aware parsing
-  const parseFilterList = (value) => {
-    if (!value || typeof value !== 'string') return [];
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < value.length; i++) {
-      const char = value[i];
-      const nextChar = value[i + 1];
-
-      if (char === '"' && inQuotes && nextChar === '"') {
-        current += '"';
-        i++;
-      } else if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        const trimmed = current.trim().replace(/^["']|["']$/g, '');
-        if (trimmed) result.push(normalizeForMatch(trimmed));
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-
-    const trimmed = current.trim().replace(/^["']|["']$/g, '');
-    if (trimmed) result.push(normalizeForMatch(trimmed));
-
-    return result;
-  };
-
   // Field lookup helper - handles space/underscore/case variations
   const getField = (obj, ...keys) => {
     if (!obj) return '';
@@ -1734,10 +1748,11 @@ function searchUploadedContacts() {
   });
 
   // Parse ICP filters with CSV-aware parsing
-  const titles = parseFilterList(document.getElementById('src-titles').value);
-  const industries = parseFilterList(document.getElementById('src-industries').value);
-  const sizes = parseFilterList(document.getElementById('src-sizes').value);
-  const geos = parseFilterList(document.getElementById('src-geos').value);
+  // Use unified CSV-aware filter parsing (handles quotes, commas, normalization)
+  const titles = parseCommaSeparatedInput(document.getElementById('src-titles').value);
+  const industries = parseCommaSeparatedInput(document.getElementById('src-industries').value);
+  const sizes = parseCommaSeparatedInput(document.getElementById('src-sizes').value);
+  const geos = parseCommaSeparatedInput(document.getElementById('src-geos').value);
 
   // Normalize all contacts once
   const normalizedContacts = contacts.map(normalizeContact);
