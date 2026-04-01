@@ -1570,6 +1570,18 @@ function handleCSVUpload(event) {
   const file = event.target.files?.[0];
   if (!file) return;
 
+  // ── Phase 5: CSV file validation (type and size) ────────────────────────────
+  const maxBytes = 10 * 1024 * 1024; // 10MB limit
+  const lowerName = (file.name || '').toLowerCase();
+  if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.txt')) {
+    showToast('Please upload a CSV or TXT file', 'error');
+    return;
+  }
+  if (file.size > maxBytes) {
+    showToast('File is too large (max 10MB)', 'error');
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = (e) => {
     const csv = e.target?.result;
@@ -1625,8 +1637,16 @@ function handleCSVUpload(event) {
       return rows;
     };
 
-    // Parse CSV with proper RFC-4180 handling
-    const rows = parseCSV(csv);
+    // ── Phase 5: Parse CSV with error handling ─────────────────────────────────
+    let rows = [];
+    try {
+      rows = parseCSV(csv);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to parse CSV';
+      showToast(`CSV parsing error: ${msg}`, 'error');
+      return;
+    }
+
     if (rows.length < 2) { showToast('CSV must have header + data rows', 'error'); return; }
 
     // Normalize headers: remove BOM, trim, lowercase, collapse spaces
