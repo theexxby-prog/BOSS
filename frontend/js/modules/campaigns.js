@@ -1981,7 +1981,7 @@ function showSearchResultsTable(contacts) {
     </tr>`).join('');
 
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:900px;width:96vw">
+    <div class="modal-box" style="max-width:900px;width:96vw;max-height:94vh;overflow-y:auto;display:flex;flex-direction:column">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
         <div>
           <div class="fw5 fs16">CSV Search Results (Issue #5)</div>
@@ -1990,7 +1990,7 @@ function showSearchResultsTable(contacts) {
         <button onclick="this.closest('.modal-overlay').remove()" class="btn btn-ghost btn-sm">✕</button>
       </div>
 
-      <div style="overflow-y:auto;overflow-x:auto;max-height:60vh;border:0.5px solid var(--border);border-radius:8px;margin-bottom:16px">
+      <div style="overflow-y:auto;overflow-x:auto;flex:1;min-height:0;border:0.5px solid var(--border);border-radius:8px;margin-bottom:16px">
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr style="background:var(--bg-muted);border-bottom:0.5px solid var(--border)">
