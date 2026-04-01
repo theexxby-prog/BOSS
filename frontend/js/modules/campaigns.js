@@ -1633,13 +1633,19 @@ function searchUploadedContacts() {
   const sizes = document.getElementById('src-sizes').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const geos = document.getElementById('src-geos').value.split(',').map(g => g.trim().toLowerCase()).filter(Boolean);
 
-  // Case-insensitive field lookup helper
+  // Field lookup helper - handles space vs underscore variations
   const getField = (obj, ...keys) => {
     if (!obj) return '';
-    const objKeys = Object.keys(obj);
+    // Get all object keys normalized (remove spaces/underscores for comparison)
+    const normalized = {};
+    Object.keys(obj).forEach(k => {
+      const norm = k.toLowerCase().replace(/[\s_]/g, '');
+      normalized[norm] = obj[k];
+    });
+    // Try to find match in any of the provided keys
     for (const key of keys) {
-      const match = objKeys.find(k => k.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') === key.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''));
-      if (match) return obj[match];
+      const norm = key.toLowerCase().replace(/[\s_]/g, '');
+      if (norm in normalized) return normalized[norm];
     }
     return '';
   };
@@ -1657,7 +1663,7 @@ function searchUploadedContacts() {
   });
 
   // Filter contacts against ICP
-  const matches = contacts.filter(contact => {
+  const matches = contacts.filter((contact, idx) => {
     const c = normalizeContact(contact);
 
     const titleMatch = !titles.length || titles.some(t => (c.title||'').toLowerCase().includes(t));
@@ -1667,11 +1673,18 @@ function searchUploadedContacts() {
     const industryMatch = !industries.length || (c.industry && industries.some(i => (c.industry||'').toLowerCase().includes(i)));
     const sizeMatch = !sizes.length || (c.company_size && sizes.some(s => (c.company_size||'').toLowerCase().includes(s)));
 
+    // Debug first contact
+    if (idx === 0) {
+      console.log('DEBUG - First contact:', { contact, normalized: c, titleMatch, geoMatch, industryMatch, sizeMatch });
+      console.log('DEBUG - Filters:', { titles, geos, industries, sizes });
+    }
+
     // If industry/size filters are specified but data doesn't exist, skip those contacts
     // Otherwise, match based on available data
     return titleMatch && geoMatch && (!industries.length || industryMatch) && (!sizes.length || sizeMatch);
   });
 
+  console.log(`Search result: ${matches.length} matches out of ${contacts.length} contacts`);
   showToast(`Found ${matches.length} matching contacts out of ${contacts.length}`, 'info');
   window._rawSearchResults = matches;
   showSearchResultsTable(matches);
