@@ -1633,14 +1633,27 @@ function searchUploadedContacts() {
   const sizes = document.getElementById('src-sizes').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const geos = document.getElementById('src-geos').value.split(',').map(g => g.trim().toLowerCase()).filter(Boolean);
 
+  // Case-insensitive field lookup helper
+  const getField = (obj, ...keys) => {
+    if (!obj) return '';
+    const objKeys = Object.keys(obj);
+    for (const key of keys) {
+      const match = objKeys.find(k => k.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') === key.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''));
+      if (match) return obj[match];
+    }
+    return '';
+  };
+
   // Map CSV field names to expected format
   const normalizeContact = (c) => ({
     ...c,
-    title: c['job title'] || c.title || '',
-    company: c['company_name'] || c.company || '',
-    country: c.country || c['country'] || '',
-    email: c['business_email'] || c.email || '',
-    name: `${c['first_name'] || c.first_name || ''} ${c['last_name'] || c.last_name || ''}`.trim()
+    title: getField(c, 'job title', 'title', 'Job Title', 'Title') || '',
+    company: getField(c, 'company_name', 'company', 'Company Name', 'COMPANY_NAME') || '',
+    country: getField(c, 'country', 'Country') || '',
+    email: getField(c, 'business_email', 'email', 'Business Email', 'BUSINESS_EMAIL') || '',
+    industry: getField(c, 'industry', 'Industry') || '',
+    company_size: getField(c, 'company_size', 'company_size', 'Company Size', 'COMPANY_SIZE') || '',
+    name: `${getField(c, 'first_name', 'first name', 'First Name', 'FIRST_NAME')} ${getField(c, 'last_name', 'last name', 'Last Name', 'LAST_NAME')}`.trim()
   });
 
   // Filter contacts against ICP
@@ -1651,8 +1664,8 @@ function searchUploadedContacts() {
     const geoMatch = !geos.length || geos.some(g => (c.country||'').toLowerCase().includes(g));
 
     // Industry and size filters are optional (data may not be available)
-    const industryMatch = !industries.length || (c['industry'] && industries.some(i => (c['industry']||'').toLowerCase().includes(i)));
-    const sizeMatch = !sizes.length || (c['company_size'] && sizes.some(s => (c['company_size']||'').toLowerCase().includes(s)));
+    const industryMatch = !industries.length || (c.industry && industries.some(i => (c.industry||'').toLowerCase().includes(i)));
+    const sizeMatch = !sizes.length || (c.company_size && sizes.some(s => (c.company_size||'').toLowerCase().includes(s)));
 
     // If industry/size filters are specified but data doesn't exist, skip those contacts
     // Otherwise, match based on available data
