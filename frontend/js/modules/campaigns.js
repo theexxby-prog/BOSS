@@ -261,10 +261,19 @@ async function renderCampaignDetail(campaignId) {
     </div>
 
     <!-- Quick Action Buttons -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-pri btn-sm" onclick="regenerateCopy(${c.id})">↻ Regen</button>
-      <button class="btn btn-pri btn-sm" onclick="openSourcingPanel(${c.id})">Source Leads</button>
-      <button class="btn btn-ghost btn-sm" onclick="openSequenceEditor(${c.id})">+ Add Persona Track</button>
+    <div style="display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+        <button class="btn btn-pri btn-sm" onclick="regenerateCopy(${c.id})" title="Regenerate AI copy for this campaign">↻ Regen</button>
+        <div class="fs11" style="color:var(--text-tertiary)">Regenerate copy</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+        <button class="btn btn-pri btn-sm" onclick="openSourcingPanel(${c.id})" title="Upload contacts or search existing database">Source Leads</button>
+        <div class="fs11" style="color:var(--text-tertiary)">Upload or search</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+        <button class="btn btn-ghost btn-sm" onclick="openSequenceEditor(${c.id})" title="Add email nurture sequences">+ Add Persona Track</button>
+        <div class="fs11" style="color:var(--text-tertiary)">Email sequences</div>
+      </div>
     </div>
 
     ${c.status==='active'?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
