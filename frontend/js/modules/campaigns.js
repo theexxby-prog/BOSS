@@ -1990,7 +1990,7 @@ function showSearchResultsTable(contacts) {
         <button onclick="this.closest('.modal-overlay').remove()" class="btn btn-ghost btn-sm">✕</button>
       </div>
 
-      <div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:8px;margin-bottom:16px">
+      <div style="overflow-y:auto;overflow-x:auto;max-height:60vh;border:0.5px solid var(--border);border-radius:8px;margin-bottom:16px">
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr style="background:var(--bg-muted);border-bottom:0.5px solid var(--border)">
