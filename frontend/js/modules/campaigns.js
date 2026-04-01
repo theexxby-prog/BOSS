@@ -1627,11 +1627,23 @@ function searchUploadedContacts() {
   const contacts = window._uploadedContacts || [];
   if (!contacts.length) { showToast('No contacts uploaded', 'error'); return; }
 
-  // Get ICP filters
-  const titles = document.getElementById('src-titles').value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-  const industries = document.getElementById('src-industries').value.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
-  const sizes = document.getElementById('src-sizes').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  const geos = document.getElementById('src-geos').value.split(',').map(g => g.trim().toLowerCase()).filter(Boolean);
+  // Helper: Parse comma-separated filter values, strip quotes, and normalize
+  const parseFilterList = (value) => (value || '')
+    .split(',')
+    .map(v => v.trim().replace(/^["']|["']$/g, ''))  // Strip surrounding quotes
+    .filter(Boolean);
+
+  // Helper: Normalize text for matching (lowercase, collapse whitespace)
+  const normalizeForMatch = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')  // Collapse multiple spaces
+    .trim();
+
+  // Parse ICP filters with normalization
+  const titles = parseFilterList(document.getElementById('src-titles').value).map(normalizeForMatch);
+  const industries = parseFilterList(document.getElementById('src-industries').value).map(normalizeForMatch);
+  const sizes = parseFilterList(document.getElementById('src-sizes').value).map(normalizeForMatch);
+  const geos = parseFilterList(document.getElementById('src-geos').value).map(normalizeForMatch);
 
   // Field lookup helper - handles space vs underscore variations
   const getField = (obj, ...keys) => {
@@ -1662,26 +1674,42 @@ function searchUploadedContacts() {
     name: `${getField(c, 'first_name', 'first name', 'First Name', 'FIRST_NAME')} ${getField(c, 'last_name', 'last name', 'Last Name', 'LAST_NAME')}`.trim()
   });
 
-  // Filter contacts against ICP
-  const matches = contacts.filter((contact, idx) => {
-    const c = normalizeContact(contact);
+  // Detect if CSV actually contains industry/company_size data
+  const normalizedContacts = contacts.map(normalizeContact);
+  const hasIndustryData = normalizedContacts.some(c => normalizeForMatch(c.industry).length > 0);
+  const hasCompanySizeData = normalizedContacts.some(c => normalizeForMatch(c.company_size).length > 0);
 
-    const titleMatch = !titles.length || titles.some(t => (c.title||'').toLowerCase().includes(t));
-    const geoMatch = !geos.length || geos.some(g => (c.country||'').toLowerCase().includes(g));
+  // Conditionally apply filters based on data availability
+  const useIndustryFilter = industries.length > 0 && hasIndustryData;
+  const useSizeFilter = sizes.length > 0 && hasCompanySizeData;
 
-    // Industry and size filters are optional (data may not be available)
-    const industryMatch = !industries.length || industries.some(i => (c.industry||'').toLowerCase().includes(i));
-    const sizeMatch = !sizes.length || sizes.some(s => (c.company_size||'').toLowerCase().includes(s));
+  if (industries.length > 0 && !hasIndustryData) {
+    console.warn('⚠️ Industry filter specified but CSV has no industry data. Skipping industry filter.');
+  }
+  if (sizes.length > 0 && !hasCompanySizeData) {
+    console.warn('⚠️ Company size filter specified but CSV has no company size data. Skipping company size filter.');
+  }
+
+  // Filter contacts against ICP with normalized text
+  const matches = normalizedContacts.filter((c, idx) => {
+    const titleText = normalizeForMatch(c.title);
+    const geoText = normalizeForMatch(c.country);
+    const industryText = normalizeForMatch(c.industry);
+    const sizeText = normalizeForMatch(c.company_size);
+
+    const titleMatch = !titles.length || titles.some(t => titleText.includes(t));
+    const geoMatch = !geos.length || geos.some(g => geoText.includes(g));
+    const industryMatch = !useIndustryFilter || industries.some(i => industryText.includes(i));
+    const sizeMatch = !useSizeFilter || sizes.some(s => sizeText.includes(s));
 
     // Debug first contact
     if (idx === 0) {
-      console.log('DEBUG - First contact:', { contact, normalized: c, titleMatch, geoMatch, industryMatch, sizeMatch });
+      console.log('DEBUG - First contact normalized:', { original: normalizedContacts[idx], titleText, geoText, industryText, sizeText });
       console.log('DEBUG - Filters:', { titles, geos, industries, sizes });
+      console.log('DEBUG - Match results:', { titleMatch, geoMatch, industryMatch, sizeMatch });
     }
 
-    // If industry/size filters are specified but data doesn't exist, skip those contacts
-    // Otherwise, match based on available data
-    return titleMatch && geoMatch && (!industries.length || industryMatch) && (!sizes.length || sizeMatch);
+    return titleMatch && geoMatch && industryMatch && sizeMatch;
   });
 
   console.log(`Search result: ${matches.length} matches out of ${contacts.length} contacts`);
