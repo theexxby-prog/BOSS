@@ -363,7 +363,6 @@ async function renderCampaignDetail(campaignId) {
           <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--blue-600);margin-bottom:2px">Instantly Integration</div>
           <div class="fw5 fs14">Email Sequences</div>
         </div>
-        <button class="btn btn-pri btn-sm" onclick="openSequenceEditor(${c.id})">+ Add Persona Track</button>
       </div>
       <div id="seq-list-${c.id}" style="padding:4px 0">
         ${renderSequenceList(sequences, c.id)}
@@ -372,12 +371,9 @@ async function renderCampaignDetail(campaignId) {
 
     <!-- Lead Sourcing -->
     <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
-      <div style="padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--blue-600);margin-bottom:2px">Lead Sourcing</div>
-          <div class="fw5 fs14">Source Leads for this Campaign</div>
-        </div>
-        <button class="btn btn-pri btn-sm" onclick="openSourcingPanel(${c.id})">Source Leads</button>
+      <div style="padding:16px 20px;border-bottom:0.5px solid var(--border)">
+        <div class="fs11 fw5" style="text-transform:uppercase;letter-spacing:.06em;color:var(--blue-600);margin-bottom:2px">Lead Sourcing</div>
+        <div class="fw5 fs14">Source Leads for this Campaign</div>
       </div>
       <div id="sourcing-summary-${c.id}" style="padding:16px 20px">
         <div class="fs12" style="color:var(--text-tertiary)">Loading sourcing status…</div>
