@@ -385,8 +385,8 @@ async function renderCampaignDetail(campaignId) {
       <button class="btn btn-ghost btn-sm" onclick="editCampaignRequest(${c.id})">Edit</button>
     </div>`:''}
   </div>`;
-  // Load sourcing summary async after render
-  setTimeout(() => loadSourcingSummary(c.id), 0);
+  // Load sourcing summary async after render — increased delay to ensure DOM is ready
+  setTimeout(() => loadSourcingSummary(c.id), 150);
 }
 
 // ═══════════════════════════════════════════════════════════
