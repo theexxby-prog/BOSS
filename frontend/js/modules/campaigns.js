@@ -1528,40 +1528,80 @@ function handleCSVUpload(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const csv = e.target?.result;
-    const lines = csv.split('\n').filter(l => l.trim());
-    if (lines.length < 2) { showToast('CSV must have header + data rows', 'error'); return; }
 
-    // Parse CSV properly handling quoted fields with commas
-    const parseCSVLine = (line) => {
-      const result = [];
+    // RFC-4180 compliant CSV parser that handles multiline quoted fields
+    const parseCSV = (text) => {
+      const rows = [];
       let current = '';
       let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        const nextChar = line[i + 1];
+      let row = [];
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
         if (char === '"') {
           if (inQuotes && nextChar === '"') {
+            // Escaped quote
             current += '"';
             i++;
           } else {
+            // Toggle quote state
             inQuotes = !inQuotes;
           }
         } else if (char === ',' && !inQuotes) {
-          result.push(current.trim());
+          // Field separator
+          row.push(current.trim());
           current = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          // Row separator (skip \r\n pairs)
+          if (current.trim() || row.length > 0) {
+            row.push(current.trim());
+            if (row.some(f => f.length > 0)) {
+              rows.push(row);
+            }
+            row = [];
+            current = '';
+          }
+          if (char === '\r' && nextChar === '\n') i++; // Skip \n in \r\n
         } else {
           current += char;
         }
       }
-      result.push(current.trim());
-      return result;
+
+      // Add final field and row
+      if (current.trim() || row.length > 0) {
+        row.push(current.trim());
+        if (row.some(f => f.length > 0)) {
+          rows.push(row);
+        }
+      }
+
+      return rows;
     };
 
-    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
-    const contacts = lines.slice(1).map(line => {
-      const values = parseCSVLine(line);
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = values[i] || null; });
+    // Parse CSV with proper RFC-4180 handling
+    const rows = parseCSV(csv);
+    if (rows.length < 2) { showToast('CSV must have header + data rows', 'error'); return; }
+
+    // Normalize headers: remove BOM, trim, lowercase, collapse spaces
+    const rawHeaders = rows[0];
+    const headers = rawHeaders.map(h => {
+      return h
+        .replace(/^\uFEFF/, '') // Remove BOM
+        .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' '); // Collapse whitespace
+    });
+
+    // Parse data rows into contact objects
+    const contacts = rows.slice(1).map((values, idx) => {
+      const obj = { _row_index: idx + 2 }; // Track source row for debugging
+      headers.forEach((h, i) => {
+        const val = values[i] || '';
+        obj[h] = val.replace(/^["']|["']$/g, '').trim() || null; // Remove quotes, trim, null if empty
+      });
       return obj;
     });
 
@@ -1627,34 +1667,51 @@ function searchUploadedContacts() {
   const contacts = window._uploadedContacts || [];
   if (!contacts.length) { showToast('No contacts uploaded', 'error'); return; }
 
-  // Helper: Parse comma-separated filter values, strip quotes, and normalize
-  const parseFilterList = (value) => (value || '')
-    .split(',')
-    .map(v => v.trim().replace(/^["']|["']$/g, ''))  // Strip surrounding quotes
-    .filter(Boolean);
-
-  // Helper: Normalize text for matching (lowercase, collapse whitespace)
+  // Helper: Normalize text for matching (lowercase, collapse whitespace, remove extra punctuation)
   const normalizeForMatch = (value) => String(value || '')
     .toLowerCase()
     .replace(/\s+/g, ' ')  // Collapse multiple spaces
     .trim();
 
-  // Parse ICP filters with normalization
-  const titles = parseFilterList(document.getElementById('src-titles').value).map(normalizeForMatch);
-  const industries = parseFilterList(document.getElementById('src-industries').value).map(normalizeForMatch);
-  const sizes = parseFilterList(document.getElementById('src-sizes').value).map(normalizeForMatch);
-  const geos = parseFilterList(document.getElementById('src-geos').value).map(normalizeForMatch);
+  // Helper: Parse comma-separated filter values with CSV-aware parsing
+  const parseFilterList = (value) => {
+    if (!value || typeof value !== 'string') return [];
+    const result = [];
+    let current = '';
+    let inQuotes = false;
 
-  // Field lookup helper - handles space vs underscore variations
+    for (let i = 0; i < value.length; i++) {
+      const char = value[i];
+      const nextChar = value[i + 1];
+
+      if (char === '"' && inQuotes && nextChar === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        const trimmed = current.trim().replace(/^["']|["']$/g, '');
+        if (trimmed) result.push(normalizeForMatch(trimmed));
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+
+    const trimmed = current.trim().replace(/^["']|["']$/g, '');
+    if (trimmed) result.push(normalizeForMatch(trimmed));
+
+    return result;
+  };
+
+  // Field lookup helper - handles space/underscore/case variations
   const getField = (obj, ...keys) => {
     if (!obj) return '';
-    // Get all object keys normalized (remove spaces/underscores for comparison)
     const normalized = {};
     Object.keys(obj).forEach(k => {
       const norm = k.toLowerCase().replace(/[\s_]/g, '');
       normalized[norm] = obj[k];
     });
-    // Try to find match in any of the provided keys
     for (const key of keys) {
       const norm = key.toLowerCase().replace(/[\s_]/g, '');
       if (norm in normalized) return normalized[norm];
@@ -1662,59 +1719,71 @@ function searchUploadedContacts() {
     return '';
   };
 
-  // Map CSV field names to expected format
+  // Canonical contact normalization with fallbacks (Issue #6)
   const normalizeContact = (c) => ({
     ...c,
-    title: getField(c, 'job title', 'title', 'Job Title', 'Title') || '',
-    company: getField(c, 'company_name', 'company', 'Company Name', 'COMPANY_NAME') || '',
-    country: getField(c, 'country', 'Country') || '',
-    email: getField(c, 'business_email', 'email', 'Business Email', 'BUSINESS_EMAIL') || '',
-    industry: getField(c, 'industry', 'Industry') || '',
-    company_size: getField(c, 'company_size', 'company_size', 'Company Size', 'COMPANY_SIZE') || '',
-    name: `${getField(c, 'first_name', 'first name', 'First Name', 'FIRST_NAME')} ${getField(c, 'last_name', 'last name', 'Last Name', 'LAST_NAME')}`.trim()
+    title: getField(c, 'job title', 'title') || '',
+    company: getField(c, 'company name', 'company') || '',
+    country: getField(c, 'country') || '',
+    email: getField(c, 'business email', 'email') || '', // Fallback for field mapping
+    first_name: getField(c, 'first name') || '',
+    last_name: getField(c, 'last name') || '',
+    industry: getField(c, 'industry') || '',
+    company_size: getField(c, 'company size') || '',
+    name: `${getField(c, 'first name') || ''} ${getField(c, 'last name') || ''}`.trim(),
   });
 
-  // Detect if CSV actually contains industry/company_size data
+  // Parse ICP filters with CSV-aware parsing
+  const titles = parseFilterList(document.getElementById('src-titles').value);
+  const industries = parseFilterList(document.getElementById('src-industries').value);
+  const sizes = parseFilterList(document.getElementById('src-sizes').value);
+  const geos = parseFilterList(document.getElementById('src-geos').value);
+
+  // Normalize all contacts once
   const normalizedContacts = contacts.map(normalizeContact);
-  const hasIndustryData = normalizedContacts.some(c => normalizeForMatch(c.industry).length > 0);
-  const hasCompanySizeData = normalizedContacts.some(c => normalizeForMatch(c.company_size).length > 0);
 
-  // Conditionally apply filters based on data availability
-  const useIndustryFilter = industries.length > 0 && hasIndustryData;
-  const useSizeFilter = sizes.length > 0 && hasCompanySizeData;
+  // Detect field availability for best-effort mode (Issue #4)
+  const hasAnyIndustry = normalizedContacts.some(c => normalizeForMatch(c.industry).length > 0);
+  const hasAnySize = normalizedContacts.some(c => normalizeForMatch(c.company_size).length > 0);
 
-  if (industries.length > 0 && !hasIndustryData) {
-    console.warn('⚠️ Industry filter specified but CSV has no industry data. Skipping industry filter.');
+  // Track which filters were skipped
+  const skippedFilters = [];
+  if (industries.length > 0 && !hasAnyIndustry) {
+    skippedFilters.push('Industry');
   }
-  if (sizes.length > 0 && !hasCompanySizeData) {
-    console.warn('⚠️ Company size filter specified but CSV has no company size data. Skipping company size filter.');
+  if (sizes.length > 0 && !hasAnySize) {
+    skippedFilters.push('Company Size');
   }
 
-  // Filter contacts against ICP with normalized text
+  // Show UI feedback for skipped filters (Issue #9)
+  if (skippedFilters.length > 0) {
+    showToast(`⚠️ Filters skipped (no CSV data): ${skippedFilters.join(', ')}`, 'warning');
+  }
+
+  // Filter contacts with per-row best-effort logic (Issue #4)
   const matches = normalizedContacts.filter((c, idx) => {
     const titleText = normalizeForMatch(c.title);
     const geoText = normalizeForMatch(c.country);
     const industryText = normalizeForMatch(c.industry);
     const sizeText = normalizeForMatch(c.company_size);
 
+    // Title and geo filters always apply
     const titleMatch = !titles.length || titles.some(t => titleText.includes(t));
     const geoMatch = !geos.length || geos.some(g => geoText.includes(g));
-    const industryMatch = !useIndustryFilter || industries.some(i => industryText.includes(i));
-    const sizeMatch = !useSizeFilter || sizes.some(s => sizeText.includes(s));
 
-    // Debug first contact
-    if (idx === 0) {
-      console.log('DEBUG - First contact normalized:', { original: normalizedContacts[idx], titleText, geoText, industryText, sizeText });
-      console.log('DEBUG - Filters:', { titles, geos, industries, sizes });
-      console.log('DEBUG - Match results:', { titleMatch, geoMatch, industryMatch, sizeMatch });
-    }
+    // Industry/size use best-effort: skip if row has no data for that field (Issue #4)
+    const industryMatch = !industries.length || !industryText || industries.some(i => industryText.includes(i));
+    const sizeMatch = !sizes.length || !sizeText || sizes.some(s => sizeText.includes(s));
 
     return titleMatch && geoMatch && industryMatch && sizeMatch;
   });
 
-  console.log(`Search result: ${matches.length} matches out of ${contacts.length} contacts`);
-  showToast(`Found ${matches.length} matching contacts out of ${contacts.length}`, 'info');
+  // Store results with filters for assignment (Issue #5)
   window._rawSearchResults = matches;
+  window._rawSearchFilters = { titles, industries, sizes, geos }; // Store for assignment
+
+  console.log(`✓ Search complete: ${matches.length} matches out of ${contacts.length} contacts`);
+  showToast(`Found ${matches.length} matching contacts out of ${contacts.length}`, 'info');
   showSearchResultsTable(matches);
 }
 
@@ -1792,33 +1861,40 @@ function showSearchResultsTable(contacts) {
   overlay.className = 'modal-overlay';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-  const rows = contacts.slice(0, 100).map(c => {
-    const name = `${c['first_name'] || c.FIRST_NAME || ''} ${c['last_name'] || c.LAST_NAME || ''}`.trim();
-    const title = c['job title'] || c['Job Title'] || c.title || '—';
-    const company = c['company_name'] || c['COMPANY_NAME'] || c.company || '—';
-    const email = c['business_email'] || c['BUSINESS_EMAIL'] || c.email || '—';
-    return `
+  // Normalize contact for display
+  const displayContacts = contacts.slice(0, 100).map((c, idx) => ({
+    ...c,
+    _display_idx: idx,
+    _name: c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || '—',
+    _title: c.title || '—',
+    _company: c.company || '—',
+    _email: c.email || '—',
+  }));
+
+  const rows = displayContacts.map((c, idx) => `
     <tr>
-      <td style="padding:8px 12px"><strong>${name||'—'}</strong></td>
-      <td style="padding:8px 12px" class="fs12">${title}</td>
-      <td style="padding:8px 12px" class="fs12">${company}</td>
-      <td style="padding:8px 12px" class="fs12">${email}</td>
-    </tr>`;
-  }).join('');
+      <td style="padding:8px 12px"><input type="checkbox" class="csv-result-checkbox" data-idx="${idx}" onchange="updateRawResultsSelection()"/></td>
+      <td style="padding:8px 12px"><strong>${c._name}</strong></td>
+      <td style="padding:8px 12px" class="fs12">${c._title}</td>
+      <td style="padding:8px 12px" class="fs12">${c._company}</td>
+      <td style="padding:8px 12px" class="fs12">${c._email}</td>
+    </tr>`).join('');
 
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:800px;width:96vw">
+    <div class="modal-box" style="max-width:900px;width:96vw">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
         <div>
-          <div class="fw5 fs16">Search Results</div>
+          <div class="fw5 fs16">CSV Search Results (Issue #5)</div>
           <div class="fs12" style="color:var(--text-tertiary)">${contacts.length} matches found</div>
         </div>
         <button onclick="this.closest('.modal-overlay').remove()" class="btn btn-ghost btn-sm">✕</button>
       </div>
+
       <div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:8px;margin-bottom:16px">
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr style="background:var(--bg-muted);border-bottom:0.5px solid var(--border)">
+              <th style="width:40px;padding:8px 12px"><input type="checkbox" id="csv-select-all" onchange="toggleRawResultsSelectAll(this)"/></th>
               <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Name</th>
               <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Title</th>
               <th style="padding:8px 12px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Company</th>
@@ -1830,11 +1906,73 @@ function showSearchResultsTable(contacts) {
           </tbody>
         </table>
       </div>
+
       ${contacts.length > 100 ? `<div class="fs12" style="color:var(--text-tertiary);margin-bottom:16px">Showing 100 of ${contacts.length} results</div>` : ''}
-      <button class="btn btn-pri" style="width:100%" onclick="document.getElementById('sourcing-panel-overlay').remove()">Close</button>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-pri" style="flex:1" id="csv-assign-btn" onclick="assignRawSearchResults()">Assign Selected to Campaign</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('sourcing-panel-overlay').remove()">Cancel</button>
+      </div>
     </div>`;
 
   document.body.appendChild(overlay);
+  window._rawSearchDisplayContacts = displayContacts; // Store for assignment
+}
+
+// Helper: Toggle select-all for raw search results (Issue #5)
+function toggleRawResultsSelectAll(checkbox) {
+  document.querySelectorAll('.csv-result-checkbox').forEach(cb => {
+    cb.checked = checkbox.checked;
+  });
+  updateRawResultsSelection();
+}
+
+// Helper: Update selection count for raw results (Issue #5)
+function updateRawResultsSelection() {
+  const checked = document.querySelectorAll('.csv-result-checkbox:checked').length;
+  const btn = document.getElementById('csv-assign-btn');
+  if (btn) {
+    btn.disabled = checked === 0;
+    btn.textContent = checked > 0 ? `Assign ${checked} Selected` : 'Assign Selected to Campaign';
+  }
+}
+
+// Assign raw CSV search results to campaign (Issue #5)
+async function assignRawSearchResults() {
+  const campaignId = window._currentSourcingCampaignId;
+  if (!campaignId) { showToast('No campaign selected', 'error'); return; }
+
+  const checkedBoxes = document.querySelectorAll('.csv-result-checkbox:checked');
+  if (!checkedBoxes.length) { showToast('Select at least one contact', 'error'); return; }
+
+  const selected = Array.from(checkedBoxes).map(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    return window._rawSearchDisplayContacts[idx];
+  });
+
+  const btn = document.getElementById('csv-assign-btn');
+  if (btn) { btn.textContent = 'Assigning…'; btn.disabled = true; }
+
+  // Normalize contacts before assignment (Issue #6)
+  const normalizedForAssign = selected.map(c => ({
+    first_name: c.first_name || c.name?.split(' ')[0] || '',
+    last_name: c.last_name || c.name?.split(' ').slice(1).join(' ') || '',
+    email: c.email || c.business_email || '', // Fallback mapping (Issue #6)
+    title: c.title || '',
+    company: c.company || '',
+    country: c.country || '',
+  }));
+
+  const res = await API.assignLeads(campaignId, normalizedForAssign);
+
+  if (btn) { btn.textContent = 'Assign Selected to Campaign'; btn.disabled = false; }
+
+  if (!res.success) { showToast(`Error: ${res.error}`, 'error'); return; }
+
+  const { added, dupes, errors } = res.data;
+  showToast(`✓ ${added} leads assigned${dupes?`, ${dupes} duplicates`:''}${errors?`, ${errors} errors`:''}`);
+  document.getElementById('sourcing-panel-overlay')?.remove();
+  loadSourcingSummary(campaignId);
 }
 
 window.handleCSVUpload = handleCSVUpload;

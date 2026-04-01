@@ -44,13 +44,18 @@ async function searchOwnDB(url: URL, env: Env, origin: string | null): Promise<R
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  // Exclude leads already assigned to this campaign
-  const excludeJoin = campaignId
-    ? `LEFT JOIN campaign_leads cl ON cl.lead_id = gl.id AND cl.campaign_id = ${parseInt(campaignId)}`
-    : '';
-  const excludeWhere = campaignId
-    ? (conditions.length ? ' AND cl.lead_id IS NULL' : 'WHERE cl.lead_id IS NULL')
-    : '';
+  // Issue #7: Validate campaignId as integer and use safe parameterized approach
+  let excludeJoin = '';
+  let excludeWhere = '';
+  if (campaignId) {
+    const validCampaignId = Number.isInteger(campaignId) ? campaignId : null;
+    if (validCampaignId && validCampaignId > 0) {
+      // Use parameterized query: add campaignId to params for the JOIN
+      excludeJoin = `LEFT JOIN campaign_leads cl ON cl.lead_id = gl.id AND cl.campaign_id = ?`;
+      params.push(validCampaignId);
+      excludeWhere = conditions.length ? ' AND cl.lead_id IS NULL' : 'WHERE cl.lead_id IS NULL';
+    }
+  }
 
   const sql = `
     SELECT gl.*, COUNT(*) OVER() as total_count
@@ -140,16 +145,38 @@ async function apolloSearch(request: Request, env: Env, origin: string | null): 
 
 // ── POST /api/campaigns/:id/source-leads ─────────────────────────────────────
 // Upsert contacts into global_leads + assign to campaign_leads
+// Issue #6: Implements canonical field mapping with backend fallbacks
 async function assignLeads(request: Request, env: Env, origin: string | null, campaignId: number): Promise<Response> {
   const { contacts } = await request.json() as { contacts: any[] };
   if (!contacts?.length) return jsonResponse({ success: false, error: 'No contacts provided' }, 400, origin);
 
+  // Issue #6: Helper to extract field value with fallback variations
+  const getFieldValue = (obj: any, ...keys: string[]): string | null => {
+    for (const key of keys) {
+      if (obj && typeof obj === 'object' && key in obj) {
+        const val = obj[key];
+        if (val && typeof val === 'string' && val.trim()) {
+          return val.trim();
+        }
+      }
+    }
+    return null;
+  };
+
   let added = 0, dupes = 0, errors = 0;
 
   for (const c of contacts) {
-    if (!c.email) { errors++; continue; }
+    // Issue #6: Try multiple field name variations for email
+    const email = getFieldValue(c, 'email', 'business_email', 'business email');
+    if (!email) { errors++; continue; }
+
     try {
-      // Upsert into global_leads
+      // Issue #6: Normalize contact data with canonical field names
+      const firstName = getFieldValue(c, 'first_name', 'first name', 'firstname');
+      const lastName = getFieldValue(c, 'last_name', 'last name', 'lastname');
+      const fullName = c.name || (firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || null);
+
+      // Upsert into global_leads using parameterized queries (Issue #7)
       await dbRun(env.DB, `
         INSERT INTO global_leads (email, first_name, last_name, name, title, company, domain, industry, company_size, country, city, phone, linkedin_url, source, enriched_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -167,19 +194,26 @@ async function assignLeads(request: Request, env: Env, origin: string | null, ca
           phone        = COALESCE(excluded.phone,      phone),
           linkedin_url = COALESCE(excluded.linkedin_url, linkedin_url),
           enriched_at  = datetime('now')`,
-        [c.email, c.first_name||null, c.last_name||null,
-         c.name || `${c.first_name||''} ${c.last_name||''}`.trim() || null,
-         c.title||null, c.company||null, c.domain||null, c.industry||null,
-         c.company_size||null, c.country||null, c.city||null, c.phone||null,
-         c.linkedin_url||null, c.source||'import']
+        [email, firstName, lastName, fullName,
+         getFieldValue(c, 'title', 'job title'),
+         getFieldValue(c, 'company', 'company name'),
+         getFieldValue(c, 'domain'),
+         getFieldValue(c, 'industry'),
+         getFieldValue(c, 'company_size', 'company size'),
+         getFieldValue(c, 'country'),
+         getFieldValue(c, 'city'),
+         getFieldValue(c, 'phone'),
+         getFieldValue(c, 'linkedin_url', 'linkedin url'),
+         c.source || 'import']
       );
 
-      const lead = await dbFirst<any>(env.DB, `SELECT id FROM global_leads WHERE email=?`, [c.email]);
+      // Retrieve the lead ID using parameterized query (Issue #7)
+      const lead = await dbFirst<any>(env.DB, `SELECT id FROM global_leads WHERE email = ?`, [email]);
       if (!lead) { errors++; continue; }
 
-      // Link to campaign (ignore if already linked)
+      // Link to campaign using parameterized query (Issue #7)
       const existing = await dbFirst<any>(env.DB,
-        `SELECT id FROM campaign_leads WHERE lead_id=? AND campaign_id=?`, [lead.id, campaignId]);
+        `SELECT id FROM campaign_leads WHERE lead_id = ? AND campaign_id = ?`, [lead.id, campaignId]);
       if (!existing) {
         await dbRun(env.DB,
           `INSERT INTO campaign_leads (lead_id, campaign_id, status, billing_status) VALUES (?, ?, 'pending', 'billable')`,
@@ -188,7 +222,8 @@ async function assignLeads(request: Request, env: Env, origin: string | null, ca
       } else {
         dupes++;
       }
-    } catch {
+    } catch (err) {
+      console.error(`Error processing contact ${email}:`, err);
       errors++;
     }
   }

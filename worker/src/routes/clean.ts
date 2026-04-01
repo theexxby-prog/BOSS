@@ -3,6 +3,7 @@ import { jsonResponse } from '../cors';
 
 // ── POST /api/global-leads/clean ────────────────────────────────────────────
 // Claude-powered database cleaning: fix data quality issues, normalize fields
+// Issue #8: Model configuration moved to environment variable with fallback
 export async function cleanLeadsRoute(request: Request, env: Env, origin: string | null): Promise<Response> {
   if (request.method !== 'POST') {
     return jsonResponse({ success: false, error: 'Method not allowed' }, 405, origin);
@@ -16,6 +17,9 @@ export async function cleanLeadsRoute(request: Request, env: Env, origin: string
   }
 
   try {
+    // Issue #8: Use environment variable for model name with fallback
+    const MODEL_NAME = (env.CLAUDE_MODEL_FOR_CLEANING as string) || 'claude-haiku-4-5-20251001';
+
     // Batch into groups of 500 for Claude processing (larger batches = fewer API calls = faster)
     const batchSize = 500;
     const batches = [];
@@ -66,7 +70,7 @@ Return ONLY the JSON array, no other text.`;
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
+            model: MODEL_NAME,
             max_tokens: 4096,
             messages: [
               {
