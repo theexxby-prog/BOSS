@@ -1252,22 +1252,45 @@ window._showEmailPreviewModal = _showEmailPreviewModal;
 
 async function loadSourcingSummary(campaignId) {
   const el = document.getElementById(`sourcing-summary-${campaignId}`);
-  if (!el) return;
-  const res = await API.getSourcingSummary(campaignId);
-  if (!res.success) { el.innerHTML = `<div class="fs12" style="color:var(--text-tertiary)">No leads sourced yet.</div>`; return; }
-  const { total, rows } = res.data;
-  if (!total) {
-    el.innerHTML = `<div class="fs12" style="color:var(--text-tertiary)">No leads sourced yet. Click <strong>Source Leads</strong> to begin.</div>`;
+  if (!el) {
+    console.warn(`[Sourcing Summary] Element #sourcing-summary-${campaignId} not found`);
     return;
   }
-  const statusCount = (s) => rows.filter(r => r.status === s).reduce((a, r) => a + r.count, 0);
-  el.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-      <div style="text-align:center"><div class="fs20 fw5">${total}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Total Sourced</div></div>
-      <div style="text-align:center"><div class="fs20 fw5" style="color:var(--amber-600)">${statusCount('pending')}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Pending</div></div>
-      <div style="text-align:center"><div class="fs20 fw5" style="color:var(--blue-600)">${statusCount('delivered')}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">In Sequence</div></div>
-      <div style="text-align:center"><div class="fs20 fw5 clr-grn">${statusCount('accepted')}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Converted</div></div>
-    </div>`;
+
+  try {
+    const res = await API.getSourcingSummary(campaignId);
+    console.log(`[Sourcing Summary] API response for campaign ${campaignId}:`, res);
+
+    if (!res.success) {
+      el.innerHTML = `<div class="fs12" style="color:var(--text-tertiary)">No leads sourced yet.</div>`;
+      return;
+    }
+
+    const { total, rows } = res.data || {};
+
+    if (!total || !rows || rows.length === 0) {
+      el.innerHTML = `<div class="fs12" style="color:var(--text-tertiary)">No leads sourced yet. Click <strong>Source Leads</strong> to begin.</div>`;
+      return;
+    }
+
+    const statusCount = (s) => rows.filter(r => r.status === s).reduce((a, r) => a + r.count, 0);
+    const pending = statusCount('pending');
+    const delivered = statusCount('delivered');
+    const accepted = statusCount('accepted');
+
+    console.log(`[Sourcing Summary] Counts - total: ${total}, pending: ${pending}, delivered: ${delivered}, accepted: ${accepted}`);
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="text-align:center"><div class="fs20 fw5">${total}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Total Sourced</div></div>
+        <div style="text-align:center"><div class="fs20 fw5" style="color:var(--amber-600)">${pending}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Pending</div></div>
+        <div style="text-align:center"><div class="fs20 fw5" style="color:var(--blue-600)">${delivered}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">In Sequence</div></div>
+        <div style="text-align:center"><div class="fs20 fw5 clr-grn">${accepted}</div><div class="fs11" style="color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Converted</div></div>
+      </div>`;
+  } catch (err) {
+    console.error(`[Sourcing Summary] Error loading summary for campaign ${campaignId}:`, err);
+    el.innerHTML = `<div class="fs12" style="color:var(--red-600)">Error loading sourcing summary</div>`;
+  }
 }
 
 async function openSourcingPanel(campaignId) {
@@ -1542,16 +1565,37 @@ async function assignSelectedLeads(campaignId) {
   const btn = document.getElementById('src-assign-btn');
   if (btn) { btn.textContent = 'Assigning…'; btn.disabled = true; }
 
+  console.log(`[Assignment] Assigning ${selected.length} contacts to campaign ${campaignId}`);
+
   const res = await API.assignLeads(campaignId, selected);
+
+  console.log(`[Assignment] API response:`, res);
 
   if (btn) { btn.textContent = 'Assign Selected to Campaign'; btn.disabled = false; }
 
-  if (!res.success) { showToast(`Error: ${res.error}`, 'error'); return; }
+  if (!res.success) {
+    const errorMsg = res.error || 'Unknown error';
+    showToast(`Error: ${errorMsg}`, 'error');
+    console.error(`[Assignment] Error response:`, res);
+    return;
+  }
 
-  const { added, dupes, errors } = res.data;
-  showToast(`✓ ${added} leads assigned${dupes ? `, ${dupes} already in campaign` : ''}${errors ? `, ${errors} errors` : ''}`, 'success');
+  const { added, dupes, errors } = res.data || {};
+  const message = `✓ ${added} leads assigned${dupes ? `, ${dupes} already in campaign` : ''}${errors ? `, ${errors} errors` : ''}`;
+  showToast(message, 'success');
+  console.log(`[Assignment] ${message}`);
+
   document.getElementById('sourcing-panel-overlay')?.remove();
-  loadSourcingSummary(campaignId);
+
+  // Reload sourcing summary for the campaign
+  console.log(`[Assignment] Reloading sourcing summary for campaign ${campaignId}`);
+  await loadSourcingSummary(campaignId);
+
+  // Also refresh the entire campaign detail view to ensure data is fresh
+  if (State && State.viewingCampaign === campaignId) {
+    console.log(`[Assignment] Campaign detail is currently displayed, refreshing view`);
+    renderModule('campaigns');
+  }
 }
 
 window.parseCommaSeparatedInput = parseCommaSeparatedInput;
@@ -1877,14 +1921,35 @@ async function assignCleanedLeads(campaignId) {
   const cleaned = window._cleanedContacts || [];
   if (!cleaned.length) { showToast('No cleaned contacts', 'error'); return; }
 
-  const res = await API.assignLeads(campaignId, cleaned);
-  if (!res.success) { showToast(`Error: ${res.error}`, 'error'); return; }
+  console.log(`[Assignment] Assigning ${cleaned.length} cleaned contacts to campaign ${campaignId}`);
 
-  const { added, dupes, errors } = res.data;
-  showToast(`✓ ${added} leads imported${dupes?`, ${dupes} duplicates`:''}${errors?`, ${errors} errors`:''}`);
+  const res = await API.assignLeads(campaignId, cleaned);
+  console.log(`[Assignment] API response:`, res);
+
+  if (!res.success) {
+    const errorMsg = res.error || 'Unknown error';
+    showToast(`Error: ${errorMsg}`, 'error');
+    console.error(`[Assignment] Error response:`, res);
+    return;
+  }
+
+  const { added, dupes, errors } = res.data || {};
+  const message = `✓ ${added} leads imported${dupes?`, ${dupes} duplicates`:''}${errors?`, ${errors} errors`:''}`;
+  showToast(message, 'success');
+  console.log(`[Assignment] ${message}`);
+
   document.getElementById('clean-results-overlay')?.remove();
   document.getElementById('sourcing-panel-overlay')?.remove();
-  loadSourcingSummary(campaignId);
+
+  // Reload sourcing summary for the campaign
+  console.log(`[Assignment] Reloading sourcing summary for campaign ${campaignId}`);
+  await loadSourcingSummary(campaignId);
+
+  // Also refresh the entire campaign detail view to ensure data is fresh
+  if (State && State.viewingCampaign === campaignId) {
+    console.log(`[Assignment] Campaign detail is currently displayed, refreshing view`);
+    renderModule('campaigns');
+  }
 }
 
 function showSearchResultsTable(contacts) {
@@ -1998,16 +2063,37 @@ async function assignRawSearchResults() {
     country: c.country || '',
   }));
 
+  console.log(`[Assignment] Assigning ${normalizedForAssign.length} contacts to campaign ${campaignId}`);
+
   const res = await API.assignLeads(campaignId, normalizedForAssign);
+
+  console.log(`[Assignment] API response:`, res);
 
   if (btn) { btn.textContent = 'Assign Selected to Campaign'; btn.disabled = false; }
 
-  if (!res.success) { showToast(`Error: ${res.error}`, 'error'); return; }
+  if (!res.success) {
+    const errorMsg = res.error || 'Unknown error';
+    showToast(`Error: ${errorMsg}`, 'error');
+    console.error(`[Assignment] Error response:`, res);
+    return;
+  }
 
-  const { added, dupes, errors } = res.data;
-  showToast(`✓ ${added} leads assigned${dupes?`, ${dupes} duplicates`:''}${errors?`, ${errors} errors`:''}`);
+  const { added, dupes, errors } = res.data || {};
+  const message = `✓ ${added} leads assigned${dupes?`, ${dupes} duplicates`:''}${errors?`, ${errors} errors`:''}`;
+  showToast(message, 'success');
+  console.log(`[Assignment] ${message}`);
+
   document.getElementById('sourcing-panel-overlay')?.remove();
-  loadSourcingSummary(campaignId);
+
+  // Reload sourcing summary for the campaign
+  console.log(`[Assignment] Reloading sourcing summary for campaign ${campaignId}`);
+  await loadSourcingSummary(campaignId);
+
+  // Also refresh the entire campaign detail view to ensure data is fresh
+  if (State && State.viewingCampaign === campaignId) {
+    console.log(`[Assignment] Campaign detail is currently displayed, refreshing view`);
+    renderModule('campaigns');
+  }
 }
 
 window.handleCSVUpload = handleCSVUpload;
