@@ -1604,13 +1604,30 @@ function searchUploadedContacts() {
   const sizes = document.getElementById('src-sizes').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const geos = document.getElementById('src-geos').value.split(',').map(g => g.trim().toLowerCase()).filter(Boolean);
 
+  // Map CSV field names to expected format
+  const normalizeContact = (c) => ({
+    ...c,
+    title: c['job title'] || c.title || '',
+    company: c['company_name'] || c.company || '',
+    country: c.country || c['country'] || '',
+    email: c['business_email'] || c.email || '',
+    name: `${c['first_name'] || c.first_name || ''} ${c['last_name'] || c.last_name || ''}`.trim()
+  });
+
   // Filter contacts against ICP
-  const matches = contacts.filter(c => {
+  const matches = contacts.filter(contact => {
+    const c = normalizeContact(contact);
+
     const titleMatch = !titles.length || titles.some(t => (c.title||'').toLowerCase().includes(t));
-    const industryMatch = !industries.length || industries.some(i => (c.industry||'').toLowerCase().includes(i));
-    const sizeMatch = !sizes.length || sizes.some(s => (c.company_size||'').toLowerCase().includes(s));
     const geoMatch = !geos.length || geos.some(g => (c.country||'').toLowerCase().includes(g));
-    return titleMatch && industryMatch && sizeMatch && geoMatch;
+
+    // Industry and size filters are optional (data may not be available)
+    const industryMatch = !industries.length || (c['industry'] && industries.some(i => (c['industry']||'').toLowerCase().includes(i)));
+    const sizeMatch = !sizes.length || (c['company_size'] && sizes.some(s => (c['company_size']||'').toLowerCase().includes(s)));
+
+    // If industry/size filters are specified but data doesn't exist, skip those contacts
+    // Otherwise, match based on available data
+    return titleMatch && geoMatch && (!industries.length || industryMatch) && (!sizes.length || sizeMatch);
   });
 
   showToast(`Found ${matches.length} matching contacts out of ${contacts.length}`, 'info');
@@ -1692,13 +1709,19 @@ function showSearchResultsTable(contacts) {
   overlay.className = 'modal-overlay';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-  const rows = contacts.slice(0, 100).map(c => `
+  const rows = contacts.slice(0, 100).map(c => {
+    const name = `${c['first_name'] || c.FIRST_NAME || ''} ${c['last_name'] || c.LAST_NAME || ''}`.trim();
+    const title = c['job title'] || c['Job Title'] || c.title || '—';
+    const company = c['company_name'] || c['COMPANY_NAME'] || c.company || '—';
+    const email = c['business_email'] || c['BUSINESS_EMAIL'] || c.email || '—';
+    return `
     <tr>
-      <td style="padding:8px 12px"><strong>${c.name||'—'}</strong></td>
-      <td style="padding:8px 12px" class="fs12">${c.title||'—'}</td>
-      <td style="padding:8px 12px" class="fs12">${c.company||'—'}</td>
-      <td style="padding:8px 12px" class="fs12">${c.email||'—'}</td>
-    </tr>`).join('');
+      <td style="padding:8px 12px"><strong>${name||'—'}</strong></td>
+      <td style="padding:8px 12px" class="fs12">${title}</td>
+      <td style="padding:8px 12px" class="fs12">${company}</td>
+      <td style="padding:8px 12px" class="fs12">${email}</td>
+    </tr>`;
+  }).join('');
 
   overlay.innerHTML = `
     <div class="modal-box" style="max-width:800px;width:96vw">
