@@ -1,10 +1,82 @@
 import type { Env } from '../types';
 import { jsonResponse } from '../cors';
 import { dbAll, dbFirst, dbRun } from '../db';
+import { ApiError } from '../http';
+
+// ── Phase 4: Caching and indexing globals ────────────────────────────────────
+let _indexesEnsured = false;
+const SEARCH_CACHE_TTL_MS = 30_000;
+const searchCache = new Map<string, { expiresAt: number; payload: unknown }>();
+
+// ── Phase 2: Field mapping helper ────────────────────────────────────────────
+function pick(obj: any, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value && typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+// ── Phase 2: Contact normalization with fallback chains ──────────────────────
+function normalizeIncomingContact(contact: any) {
+  return {
+    email: pick(contact, 'email', 'business_email', 'BUSINESS_EMAIL', 'business email'),
+    first_name: pick(contact, 'first_name', 'FIRST_NAME', 'first name', 'firstname'),
+    last_name: pick(contact, 'last_name', 'LAST_NAME', 'last name', 'lastname'),
+    full_name: pick(contact, 'name', 'full_name', 'fullname') ||
+      `${pick(contact, 'first_name', 'first name') || ''} ${pick(contact, 'last_name', 'last name') || ''}`.trim() || null,
+    title: pick(contact, 'title', 'job_title', 'job title', 'JOB_TITLE'),
+    company: pick(contact, 'company', 'company_name', 'company name', 'COMPANY_NAME'),
+    domain: pick(contact, 'domain', 'website', 'website_url'),
+    industry: pick(contact, 'industry', 'INDUSTRY', 'industry_tag'),
+    company_size: pick(contact, 'company_size', 'company size', 'employee_count', 'headcount'),
+    country: pick(contact, 'country', 'country_code', 'COUNTRY'),
+    city: pick(contact, 'city', 'location', 'CITY'),
+    phone: pick(contact, 'phone', 'phone_number', 'phone number', 'PHONE'),
+    linkedin_url: pick(contact, 'linkedin_url', 'linkedin', 'linkedin_profile'),
+  };
+}
+
+// ── Phase 2: Payload validation ──────────────────────────────────────────────
+function validateContactsPayload(body: unknown): { contacts: Record<string, unknown>[] } {
+  if (!body || typeof body !== 'object') {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Request body must be an object');
+  }
+  const contacts = (body as { contacts?: unknown }).contacts;
+  if (!Array.isArray(contacts) || contacts.length === 0) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'contacts must be a non-empty array');
+  }
+  const invalidIndex = contacts.findIndex(c => !c || typeof c !== 'object' || Array.isArray(c));
+  if (invalidIndex !== -1) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Each contact must be an object', { index: invalidIndex });
+  }
+  return { contacts: contacts as Record<string, unknown>[] };
+}
+
+// ── Phase 4: Ensure database indexes ─────────────────────────────────────────
+async function ensureGlobalLeadIndexes(env: Env): Promise<void> {
+  if (_indexesEnsured) return;
+  await dbRun(env.DB, `CREATE INDEX IF NOT EXISTS idx_global_leads_title ON global_leads(title)`);
+  await dbRun(env.DB, `CREATE INDEX IF NOT EXISTS idx_global_leads_industry ON global_leads(industry)`);
+  await dbRun(env.DB, `CREATE INDEX IF NOT EXISTS idx_global_leads_country ON global_leads(country)`);
+  await dbRun(env.DB, `CREATE INDEX IF NOT EXISTS idx_global_leads_company_size ON global_leads(company_size)`);
+  _indexesEnsured = true;
+}
 
 // ── GET /api/global-leads ─────────────────────────────────────────────────────
 // Search own contact database with ICP filters
 async function searchOwnDB(url: URL, env: Env, origin: string | null): Promise<Response> {
+  await ensureGlobalLeadIndexes(env);
+
+  // ── Phase 4: Check cache first ──────────────────────────────────────────────
+  const cacheKey = url.search;
+  const cached = searchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return jsonResponse(cached.payload, 200, origin);
+  }
+
   const titles     = url.searchParams.get('titles')?.split(',').map(t => t.trim()).filter(Boolean) || [];
   const industries = url.searchParams.get('industries')?.split(',').map(i => i.trim()).filter(Boolean) || [];
   const sizes      = url.searchParams.get('sizes')?.split(',').map(s => s.trim()).filter(Boolean) || [];
@@ -48,11 +120,11 @@ async function searchOwnDB(url: URL, env: Env, origin: string | null): Promise<R
   let excludeJoin = '';
   let excludeWhere = '';
   if (campaignId) {
-    const validCampaignId = Number.isInteger(campaignId) ? campaignId : null;
-    if (validCampaignId && validCampaignId > 0) {
+    const parsedCampaignId = parseInt(campaignId, 10);
+    if (Number.isFinite(parsedCampaignId) && parsedCampaignId > 0) {
       // Use parameterized query: add campaignId to params for the JOIN
       excludeJoin = `LEFT JOIN campaign_leads cl ON cl.lead_id = gl.id AND cl.campaign_id = ?`;
-      params.push(validCampaignId);
+      params.push(parsedCampaignId);
       excludeWhere = conditions.length ? ' AND cl.lead_id IS NULL' : 'WHERE cl.lead_id IS NULL';
     }
   }
@@ -69,7 +141,10 @@ async function searchOwnDB(url: URL, env: Env, origin: string | null): Promise<R
   const rows = await dbAll<any>(env.DB, sql, params);
   const total = rows[0]?.total_count ?? 0;
 
-  return jsonResponse({ success: true, data: rows, meta: { total, limit } }, 200, origin);
+  // ── Phase 4: Cache result before returning ──────────────────────────────────
+  const payload = { success: true, data: rows, meta: { total, limit } };
+  searchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, payload });
+  return jsonResponse(payload, 200, origin);
 }
 
 // ── POST /api/apollo/search ───────────────────────────────────────────────────
@@ -145,38 +220,23 @@ async function apolloSearch(request: Request, env: Env, origin: string | null): 
 
 // ── POST /api/campaigns/:id/source-leads ─────────────────────────────────────
 // Upsert contacts into global_leads + assign to campaign_leads
-// Issue #6: Implements canonical field mapping with backend fallbacks
 async function assignLeads(request: Request, env: Env, origin: string | null, campaignId: number): Promise<Response> {
-  const { contacts } = await request.json() as { contacts: any[] };
-  if (!contacts?.length) return jsonResponse({ success: false, error: 'No contacts provided' }, 400, origin);
+  if (!Number.isFinite(campaignId) || campaignId <= 0) {
+    throw new ApiError(400, 'INVALID_CAMPAIGN_ID', 'Campaign ID must be a positive integer', { campaignId });
+  }
 
-  // Issue #6: Helper to extract field value with fallback variations
-  const getFieldValue = (obj: any, ...keys: string[]): string | null => {
-    for (const key of keys) {
-      if (obj && typeof obj === 'object' && key in obj) {
-        const val = obj[key];
-        if (val && typeof val === 'string' && val.trim()) {
-          return val.trim();
-        }
-      }
-    }
-    return null;
-  };
+  const body = await request.json() as unknown;
+  const { contacts } = validateContactsPayload(body);
 
   let added = 0, dupes = 0, errors = 0;
 
   for (const c of contacts) {
-    // Issue #6: Try multiple field name variations for email
-    const email = getFieldValue(c, 'email', 'business_email', 'business email');
+    const normalized = normalizeIncomingContact(c);
+    const email = normalized.email;
     if (!email) { errors++; continue; }
 
     try {
-      // Issue #6: Normalize contact data with canonical field names
-      const firstName = getFieldValue(c, 'first_name', 'first name', 'firstname');
-      const lastName = getFieldValue(c, 'last_name', 'last name', 'lastname');
-      const fullName = c.name || (firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || null);
-
-      // Upsert into global_leads using parameterized queries (Issue #7)
+      // Upsert into global_leads using parameterized queries
       await dbRun(env.DB, `
         INSERT INTO global_leads (email, first_name, last_name, name, title, company, domain, industry, company_size, country, city, phone, linkedin_url, source, enriched_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -194,24 +254,24 @@ async function assignLeads(request: Request, env: Env, origin: string | null, ca
           phone        = COALESCE(excluded.phone,      phone),
           linkedin_url = COALESCE(excluded.linkedin_url, linkedin_url),
           enriched_at  = datetime('now')`,
-        [email, firstName, lastName, fullName,
-         getFieldValue(c, 'title', 'job title'),
-         getFieldValue(c, 'company', 'company name'),
-         getFieldValue(c, 'domain'),
-         getFieldValue(c, 'industry'),
-         getFieldValue(c, 'company_size', 'company size'),
-         getFieldValue(c, 'country'),
-         getFieldValue(c, 'city'),
-         getFieldValue(c, 'phone'),
-         getFieldValue(c, 'linkedin_url', 'linkedin url'),
-         c.source || 'import']
+        [email, normalized.first_name, normalized.last_name, normalized.full_name,
+         normalized.title,
+         normalized.company,
+         normalized.domain,
+         normalized.industry,
+         normalized.company_size,
+         normalized.country,
+         normalized.city,
+         normalized.phone,
+         normalized.linkedin_url,
+         (c as any).source || 'import']
       );
 
-      // Retrieve the lead ID using parameterized query (Issue #7)
+      // Retrieve the lead ID using parameterized query
       const lead = await dbFirst<any>(env.DB, `SELECT id FROM global_leads WHERE email = ?`, [email]);
       if (!lead) { errors++; continue; }
 
-      // Link to campaign using parameterized query (Issue #7)
+      // Link to campaign using parameterized query
       const existing = await dbFirst<any>(env.DB,
         `SELECT id FROM campaign_leads WHERE lead_id = ? AND campaign_id = ?`, [lead.id, campaignId]);
       if (!existing) {
@@ -227,6 +287,9 @@ async function assignLeads(request: Request, env: Env, origin: string | null, ca
       errors++;
     }
   }
+
+  // ── Phase 4: Invalidate cache on mutation ───────────────────────────────────
+  searchCache.clear();
 
   return jsonResponse({ success: true, data: { added, dupes, errors } }, 200, origin);
 }
@@ -247,14 +310,15 @@ async function sourcingSummary(env: Env, origin: string | null, campaignId: numb
 // ── POST /api/global-leads/import ────────────────────────────────────────────
 // Bulk import from CSV data (array of contact objects)
 async function bulkImport(request: Request, env: Env, origin: string | null): Promise<Response> {
-  const { contacts } = await request.json() as { contacts: any[] };
-  if (!contacts?.length) return jsonResponse({ success: false, error: 'No contacts' }, 400, origin);
+  const body = await request.json() as unknown;
+  const { contacts } = validateContactsPayload(body);
 
   let added = 0, updated = 0, errors = 0;
-  for (const c of contacts) {
-    if (!c.email) { errors++; continue; }
+  for (const rawContact of contacts) {
+    const normalized = normalizeIncomingContact(rawContact);
+    if (!normalized.email) { errors++; continue; }
     try {
-      const existing = await dbFirst<any>(env.DB, `SELECT id FROM global_leads WHERE email=?`, [c.email]);
+      const existing = await dbFirst<any>(env.DB, `SELECT id FROM global_leads WHERE email=?`, [normalized.email]);
       await dbRun(env.DB, `
         INSERT INTO global_leads (email, first_name, last_name, name, title, company, domain, industry, company_size, country, city, phone, linkedin_url, source, enriched_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'import', datetime('now'))
@@ -264,13 +328,15 @@ async function bulkImport(request: Request, env: Env, origin: string | null): Pr
           industry=COALESCE(excluded.industry,industry),company_size=COALESCE(excluded.company_size,company_size),
           country=COALESCE(excluded.country,country),phone=COALESCE(excluded.phone,phone),
           linkedin_url=COALESCE(excluded.linkedin_url,linkedin_url),enriched_at=datetime('now')`,
-        [c.email, c.first_name||null, c.last_name||null,
-         c.name||`${c.first_name||''} ${c.last_name||''}`.trim()||null,
-         c.title||null, c.company||null, c.domain||null, c.industry||null,
-         c.company_size||null, c.country||null, c.city||null, c.phone||null, c.linkedin_url||null]);
+        [normalized.email, normalized.first_name, normalized.last_name, normalized.full_name,
+         normalized.title, normalized.company, normalized.domain, normalized.industry,
+         normalized.company_size, normalized.country, normalized.city, normalized.phone, normalized.linkedin_url]);
       existing ? updated++ : added++;
     } catch { errors++; }
   }
+
+  // ── Phase 4: Invalidate cache on bulk mutation ──────────────────────────────
+  searchCache.clear();
 
   return jsonResponse({ success: true, data: { added, updated, errors } }, 200, origin);
 }

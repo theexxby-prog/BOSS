@@ -11,7 +11,7 @@ export async function systemLogsRouter(request: Request, env: Env, origin: strin
   try {
     // GET /api/system-logs — all workflow statuses
     if (method === 'GET' && !id) {
-      const rows = await dbAll(env.DB, 'SELECT * FROM system_logs ORDER BY workflow_name ASC');
+      const rows = await dbAll<Record<string, unknown>>(env.DB, 'SELECT * FROM system_logs ORDER BY workflow_name ASC');
       // health summary: any failures in last 24h?
       const failedRecently = rows.filter((r: Record<string, unknown>) => r.last_status === 'failure');
       return jsonResponse({

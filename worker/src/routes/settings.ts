@@ -1,6 +1,6 @@
 import { jsonResponse } from '../cors';
 import { dbAll, dbFirst, dbRun } from '../db';
-import type { Env, RouteHandler } from '../types';
+import type { RouteHandler } from '../types';
 
 export const settingsRouter: RouteHandler = async (request, env) => {
   const url    = new URL(request.url);

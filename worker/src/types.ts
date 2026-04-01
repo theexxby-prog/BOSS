@@ -5,6 +5,7 @@ export interface Env {
   BOSS_API_TOKEN: string;
   ANTHROPIC_API_KEY: string;
   NEVERBOUNCE_API_KEY: string;
+  CLAUDE_MODEL_FOR_CLEANING?: string;
 }
 
 // ─── Clients ───────────────────────────────────────────────────────────────
