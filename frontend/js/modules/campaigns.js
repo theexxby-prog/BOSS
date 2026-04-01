@@ -1670,8 +1670,8 @@ function searchUploadedContacts() {
     const geoMatch = !geos.length || geos.some(g => (c.country||'').toLowerCase().includes(g));
 
     // Industry and size filters are optional (data may not be available)
-    const industryMatch = !industries.length || (c.industry && industries.some(i => (c.industry||'').toLowerCase().includes(i)));
-    const sizeMatch = !sizes.length || (c.company_size && sizes.some(s => (c.company_size||'').toLowerCase().includes(s)));
+    const industryMatch = !industries.length || industries.some(i => (c.industry||'').toLowerCase().includes(i));
+    const sizeMatch = !sizes.length || sizes.some(s => (c.company_size||'').toLowerCase().includes(s));
 
     // Debug first contact
     if (idx === 0) {
