@@ -7,3 +7,5 @@ dist/
 .DS_Store
 .claude/settings.json
 .claude/worktrees/
+.DS_Store
+worker/.DS_Store
