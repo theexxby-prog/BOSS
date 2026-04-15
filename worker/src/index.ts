@@ -57,12 +57,7 @@ export default {
         return webhooksRouter(request, origin);
       }
 
-      // ── Auth guard — all other /api/* routes ─────────────────────────────────
-      const authHeader = request.headers.get('Authorization') || '';
-      const token      = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-      if (!env.BOSS_API_TOKEN || token !== env.BOSS_API_TOKEN) {
-        return jsonResponse({ success: false, error: 'Unauthorized' }, 401, origin);
-      }
+      // ── Auth guard removed — open access ─────────────────────────────────
 
       // ── ICP Scoring — POST /api/leads/:id/score ─────────────────────────────
       if (request.method === 'POST' && /^\/api\/leads\/\d+\/score$/.test(path)) {

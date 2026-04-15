@@ -3,27 +3,16 @@
 
 const BASE_URL = 'https://boss-api.mehtahouse.cc';
 
-function getToken() {
-  return localStorage.getItem('boss_token') || '';
-}
-
 async function apiFetch(path, options = {}) {
   try {
-    const url   = `${BASE_URL}${path}`;
-    const token = getToken();
-    const res   = await fetch(url, {
+    const url = `${BASE_URL}${path}`;
+    const res = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...options.headers,
       },
       ...options,
     });
-    if (res.status === 401) {
-      localStorage.removeItem('boss_token');
-      window.dispatchEvent(new Event('boss:unauthorized'));
-      return { success: false, error: 'Unauthorized', data: [] };
-    }
     const json = await res.json().catch(() => ({}));
     if (!res.ok) return { success: false, error: json.error || `HTTP ${res.status}`, data: [] };
     return json;
